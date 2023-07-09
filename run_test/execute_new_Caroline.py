@@ -4,6 +4,15 @@
 Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
+
+This script is submited to SGE on UCL cluster as a task. 
+What it does is:
+    Load data that Caroline sent
+        Which data to load is using the first argument passed from qsub script.
+        The second argument from the qsub script is the surrogate protocol.
+    Run the dependence test on the data in parallel and save results on cluster.
+Note: The imported data is not changed to test for false positive rate in this script
+
 """
 import os
 print(f'working directory: {os.getcwd()}')
@@ -53,7 +62,7 @@ if __name__=="__main__":
     else:
         maxlag = 0
     
-    print(f"Running {sys.argv[1]} data, {int(sys.argv[2])}, start time {time.time()}")
+    print(f"Running {sys.argv[1]} data, {sys.argv[2]}, start time {time.time()}")
     data = load_data(f'{sys.argv[1]}')
     print(stats_list, test_list, maxlag)
     

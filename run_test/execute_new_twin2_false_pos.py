@@ -4,6 +4,19 @@
 Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
+
+This script is submited to SGE on UCL cluster as a task. 
+What it does is:
+    Load simulated data that is in ../Simulated_data
+        Which data to load is using the first argument passed from qsub script.
+        The second argument from the qsub script specifies which pairs of time series (index of simulated data) will be run. This came about because I simulated 1000 simulations in total and only want to run test on 100 simulations per run.
+    Run the dependence test on the data in parallel and save results on cluster.
+Note:
+This script particularly use the twin protocol to general surrogate test
+The imported data is changed to test for false positive rate in this script
+Integrated multiprocessor into the workflow ('new' in file name)
+This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
+
 """
 import os
 print(f'working directory: {os.getcwd()}')
@@ -11,7 +24,7 @@ print(f'working directory: {os.getcwd()}')
 # os.getcwd()
 
 # import GenerateData as dataGen
-import numpy as np
+# import numpy as np
 # import Correlation_Surrogate_tests as cst
 
 import sys # to save name passed from cmd
@@ -36,14 +49,12 @@ def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     return [pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)]
 
 if __name__=="__main__":
-    stats_list = ['ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
+    stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
     test_list = ['twin'] # , 'twin','randphase'
     maxlag = 4
     
     print(f"Loading {sys.argv[1]} data, {int(sys.argv[2])} {time.time()}")
-    data, datagen_param = load_results_params(f'{sys.argv[1]}')
-    
-    
+    data, datagen_param = load_results_params(f'{sys.argv[1]}')    
     
     print(f'Sequencing number {sys.argv[2]} to {int(sys.argv[2])+100}')
     data = data[int(sys.argv[2]):int(sys.argv[2])+100]
