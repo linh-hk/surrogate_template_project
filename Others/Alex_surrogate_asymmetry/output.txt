@@ -1,0 +1,5 @@
+power (null x): 0.8625
+power (null y): 0.65
+
+FPR (null x): 0.1875
+FPR (null y): 0.0875
