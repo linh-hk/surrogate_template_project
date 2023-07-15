@@ -330,7 +330,7 @@ def generate_niehaus(run_id, dt_s, N, noise, noise_T, intx="competitive"):
         s[i+1] = soln.y[:,-1] + eps;
         s[i+1][np.where(s[i+1]<0)] = 0;
 
-    x = s[lag::sample_period,].copy()
+    x = s[lag:lag+obs:sample_period,].copy()
     
     if (np.any(x < 2.)):
         print("Crossover?")
@@ -424,7 +424,7 @@ def generate_lv(run_id, dt_s, N, noise,noise_T,intx="competitive"):
         s[i+1] = soln.y[:,-1] + eps;
         s[i+1][np.where(s[i+1] < 0)] = 0;
 
-    x = s[lag::sample_period,];
+    x = s[lag:lag+obs:sample_period,];
     for i in range(x.ndim):
         x[:,i] += 0.001*np.random.randn(x[:,i].size);
 
@@ -432,7 +432,7 @@ def generate_lv(run_id, dt_s, N, noise,noise_T,intx="competitive"):
     #     print("test " + str(run_id) + " finished");
         
     # plt.plot(x)
-    return x
+    return [x[:,_] for _ in [0,1]]
     
     # return test_with_surr(x.reshape(-1,1));
 

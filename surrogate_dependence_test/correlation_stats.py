@@ -973,32 +973,32 @@ def mutual_info(x,y):
     
 #%% Generate data
 # if __name__=="__main__":
-    # xy_ar_u = dataGen.generate_AR1_uni_tau1(2000) # dependent
-    # xy_ar_u2 = dataGen.generate_AR1_uni_tau2(2000) # dependent
-    # xy_uni_logistic = dataGen.generate_uni_logistic_map(2000) # dependent
-    # xy_sinewn = dataGen.generate_sine_w_noise(2000) # dependent
+    # xy_ar_u = dataGen.generate_AR1_uni_tau1(500) # dependent
+    # xy_ar_u2 = dataGen.generate_AR1_uni_tau2(500) # dependent
+    # xy_uni_logistic = dataGen.generate_uni_logistic_map(500) # dependent
+    # xy_sinewn = dataGen.generate_sine_w_noise(500) # dependent
     
-    # ts_ar = [dataGen.generate_ar1(2000), dataGen.generate_ar1(2000)]
-    # ts_logistic = [dataGen.generate_logistic_map(2000), dataGen.generate_logistic_map(2000)]
+    # ts_ar = [dataGen.generate_ar1(500), dataGen.generate_ar1(500)]
+    # ts_logistic = [dataGen.generate_logistic_map(500), dataGen.generate_logistic_map(500)]
     
-    # ts_sine_intmt = [dataGen.generate_sinew_intmt_corptxn(2000), dataGen.generate_sinew_intmt_corptxn(2000)]
-    # ts_coinflip = [dataGen.generate_coinflips_w_changeHeadprob_noise(2000), dataGen.generate_coinflips_w_changeHeadprob_noise(2000)]
-    # ts_noise_wv_kurtosis = [dataGen.generate_noise_w_periodically_varying_kurtosis(2000), dataGen.generate_noise_w_periodically_varying_kurtosis(2000)]
+    # ts_sine_intmt = [dataGen.generate_sinew_intmt_corptxn(500), dataGen.generate_sinew_intmt_corptxn(500)]
+    # ts_coinflip = [dataGen.generate_coinflips_w_changeHeadprob_noise(500), dataGen.generate_coinflips_w_changeHeadprob_noise(500)]
+    # ts_noise_wv_kurtosis = [dataGen.generate_noise_w_periodically_varying_kurtosis(500), dataGen.generate_noise_w_periodically_varying_kurtosis(500)]
     # # Dependent, x and w dependent on each other
-    # xy_FitzHugh_Nagumo = dataGen.generate_FitzHugh_Nagumo(2000)
+    # xy_FitzHugh_Nagumo = dataGen.generate_FitzHugh_Nagumo(500)
     # r = np.array([1, 0.72, 1.53, 1.27])
     # a = np.array([[1, 1.09, 1.52, 0],
     #      [0, 1, 0.44, 1.36],
     #      [2.33, 0, 1, 0.47],
     #      [1.21, 0.51, 0.35, 1]])
-    # dt_s, N = 0.25, 2000
-    # # independent - according to Alex so made code of independent
+    # dt_s = 0.25, N = 500
+    # # independent 
     # ts_chaoticLV = [dataGen.generate_chaotic_lv(N, r, a), dataGen.generate_chaotic_lv(N, r, a)]
     
     # # dependent - predator and prey
-    # xy_Caroline_LV = dataGen.generate_lv(run_id = 1, dt_s = 0.25, N=2000, noise=0.05*0.5,noise_T=0.05,intx="competitive")
+    # xy_Caroline_LV = dataGen.generate_lv(run_id = 1, dt_s = 0.25, N=500, noise=0.05*0.5,noise_T=0.05,intx="competitive")
     # # dependent - two species competing for a chemical
-    # xy_Caroline_CH = dataGen.generate_niehaus(run_id=1, dt_s=0.25, N=2000, noise=0.05*0.5, noise_T=0.05, intx="competitive")[:,:2]
+    # xy_Caroline_CH = dataGen.generate_niehaus(run_id=1, dt_s=0.25, N=500, noise=0.05*0.5, noise_T=0.05, intx="competitive")[:,:2]
     # #%%% Save generated data
     # filename = 'results_Generated_data.pkl'
     # print(f'Saving Generated data to {filename}')
