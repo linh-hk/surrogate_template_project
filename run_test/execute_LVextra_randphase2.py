@@ -34,7 +34,8 @@ import time
 import pickle # load and save data
 
 # from mpi4py.futures import MPIPoolExecutor
-import Simulation_code.surrogate_dependence_test.main as sdt
+sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+import main as sdt
 #%%
 def load_results_params(data_name):
     # names = 'caroline_LvCh_FitzHugh_100'

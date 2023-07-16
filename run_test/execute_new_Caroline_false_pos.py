@@ -30,7 +30,8 @@ import time
 import pickle # load and save data
 
 # from mpi4py.futures import MPIPoolExecutor
-import Simulation_code.surrogate_dependence_test.main as sdt
+sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+import main as sdt
 
 # list of data_name:
     # ['competitive_xdom_1extinct_fastsampling_data_100reps',

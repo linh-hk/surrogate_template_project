@@ -27,7 +27,9 @@ from pyunicorn.timeseries import surrogates #for iaaft
 import pickle
 import dill
 # from multiprocessing import Pool, Process, Queue
-from Simulation_code.surrogate_dependence_test.multiprocessor import Multiprocessor
+import sys
+sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+from multiprocessor import Multiprocessor
 
 #%%% Surrogates
     #%%%% Random shuffle
@@ -144,7 +146,7 @@ def trim_periodic_data(y,p=0):
     return (k_start,k_end);
     #%%%% Twin method
 
-from Simulation_code.surrogate_dependence_test.ccm_xory import choose_embed_params
+from ccm_xory import choose_embed_params
 
 """
 Embed data into a delay space:
@@ -282,11 +284,11 @@ def tts(x,y,r):
 
 #%% Correlation Statistics
 
-from Simulation_code.surrogate_dependence_test.correlation_stats import correlation_Pearson
-from Simulation_code.surrogate_dependence_test.correlation_stats import lsa_new_delay_linh
-from Simulation_code.surrogate_dependence_test.correlation_stats import mutual_info
-from Simulation_code.surrogate_dependence_test.ccm_xory import ccm_predict_surr, ccm_surr_predict
-from Simulation_code.surrogate_dependence_test.granger_xory import granger_predict_surr, granger_surr_predict
+from correlation_stats import correlation_Pearson
+from correlation_stats import lsa_new_delay_linh
+from correlation_stats import mutual_info
+from ccm_xory import ccm_predict_surr, ccm_surr_predict
+from granger_xory import granger_predict_surr, granger_surr_predict
 #%% scan_lags and calculate pvals
 
 def iter_scanlag(i, statistic, x, y, kw_statistic):

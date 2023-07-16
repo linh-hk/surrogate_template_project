@@ -14,7 +14,10 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy import stats
 import dill
-from Simulation_code.surrogate_dependence_test.main import manystats_manysurr
+
+import sys
+sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+from main import manystats_manysurr
 import time
 start = time.time()
 

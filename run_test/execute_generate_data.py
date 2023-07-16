@@ -20,7 +20,7 @@ This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' 
 """
 import os
 print(f'working directory: {os.getcwd()}')
-os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+# os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test')
 # os.getcwd()
 
@@ -36,6 +36,8 @@ import time
 import pickle # load and save data
 
 # from mpi4py.futures import MPIPoolExecutor
+
+# sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 from Simulation_code.surrogate_dependence_test.GenerateData2_GLV import generate_lv
 from Simulation_code.surrogate_dependence_test.GenerateData2_GLV import generate_lv_nocap
 
