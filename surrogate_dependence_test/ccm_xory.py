@@ -22,7 +22,9 @@ import pandas as pd
 from multiprocessing import Pool # , Process, Queue
 
 #%% Define multiprocessor object
-from Simulation_code.surrogate_dependence_test.multiprocessor import Multiprocessor
+import sys
+sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+from multiprocessor import Multiprocessor
 # class Multiprocessor:
 
 #     def __init__(self):

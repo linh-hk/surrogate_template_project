@@ -8,11 +8,11 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "tts_cg_onetenth"
+#$ -N "LV_extra_tts"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u execute_new_tts2.py $1 $2
+python3 -u Simulation_code/run_test/execute_LVextra_tts2.py $1
