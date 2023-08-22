@@ -216,12 +216,13 @@ def generate_chaotic_lv(N, r, a, dt_s = 0.25): #, noise,noise_T):
     # plt.plot(x)
     # x and y are independent realisation of s4 only so ...
     return x[:,-1]
-r = np.array([1, 0.72, 1.53, 1.27])
-a = np.array([[1, 1.09, 1.52, 0],
-     [0, 1, 0.44, 1.36],
-     [2.33, 0, 1, 0.47],
-     [1.21, 0.51, 0.35, 1]])
-dt_s, N = 0.25, 100
+ARGs = {'N': 100, 'r' : np.array([1, 0.72, 1.53, 1.27]),
+        'a' : np.array([[1, 1.09, 1.52, 0], 
+                        [0, 1, 0.44, 1.36], 
+                        [2.33, 0, 1, 0.47], 
+                        [1.21, 0.51, 0.35, 1]]),
+        'dt_s': 0.25}
+
 # LVuncut, LVcut = generate_lv(r,a,0.25,100)
 # test = generate_chaotic_lv(400, r, a, 0.25)
 
@@ -346,19 +347,11 @@ def ar_control(noise=1.0):
         x[i+1] = 0.8*x[i] + noise*np.random.randn();
       
     x = x[100:];
-    # null = get_iaaft_surr(x,num_surr=99);
-    # pred_err_null = pred_error(null,2,1);
-    
-    # pred_err_true = pred_error(x.reshape(-1,1), 2, 1)
-
-    # pred_err_null = np.append(pred_err_null, pred_err_true)
-    
-    # return np.mean(pred_err_null >= pred_err_true)
     return x
 #%%% Caroline LV
 # Lotka Volterra
 def lotkaVolterra(t,y,mu,M):
-    return y * (mu + M @ y);
+    return y * (mu + M @ y);  
 
 def lotkaVolterraSat(t,y,mu,M,K):    
     intx_mat = M/(K + y);
