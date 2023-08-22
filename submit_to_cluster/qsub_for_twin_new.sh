@@ -1,6 +1,6 @@
 #$ -l tmem=2G
 #$ -l h_vmem=2G
-#$ -l h_rt=35:00:00
+#$ -l h_rt=06:00:00
 #$ -pe smp 8
 #$ -R y
 
@@ -8,11 +8,11 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "LV_extra_twin"
+#$ -N "twin_nolag"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute_LVextra_twin2.py $1
+python3 -u Simulation_code/run_test/execute_new_twin2.py $1 $2
