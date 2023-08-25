@@ -358,77 +358,28 @@ def lotkaVolterraSat(t,y,mu,M,K):
     lv = y * (mu + intx_mat @ y);
     return lv;
 
-# Originally Caroline return tested results. Linh modified to only generate ts
-def generate_lv(run_id, dt_s, N, noise,noise_T,intx="competitive"):
+def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, mode = '', fn = lotkaVolterra): # ,intx="competitive"
     print('Generating Caroline Lotka-Volterra model')
-    dt=0.05;
-    mu = np.array([0.7,0.7]);
-    M = np.zeros((2,2));
-    fn = lotkaVolterra;
-    if (intx=="competitive"):
-        M = [[-0.4,-0.5],
-             [-0.5,-0.4]];
-        args=(mu,M)
-    if (intx=="asym_competitive"):
-        mu = [0.8,0.8];
-        M = [[-0.4,-0.5],[-0.9,-0.4]];
-        args=(mu,M);
-    if (intx=="asym_competitive_2"):
-        M = [[-1.4,-0.5],
-             [-0.9,-1.4]];
-        mu = [0.8,0.8];
-        args=(mu,M);
-    if (intx=="asym_competitive_2_rev"):
-        mu = [0.8,0.8];
-        M = [[-1.4,-0.9],[-0.5,-1.4]];
-        args=(mu,M);  
-    if (intx=="asym_competitive_3"):
-        mu = [50.,50.];
-        M = [[-100.,-95.],[-99.,-100.]]
-        args=(mu,M);
-    elif (intx=="mutualistic"):
-        M = [[-0.4,0.3],
-             [0.3,-0.4]];
-        args=(mu,M)
-    elif (intx=="saturable"):     
-        M = np.array([[-10.,0.3],
-                      [1.,-10.]]);
-        K = np.array([[100.,10.],
-                      [20.,100.]]) 
-        args=(mu,M,K)
-        fn = lotkaVolterraSat;
-    elif (intx=="predprey"):              
-        mu = np.array([1.1,-0.4])
-        M = np.array([[0.0,-0.4],
-                      [0.1,0.0]]);
-        args=(mu,M)
-    sample_period = int(np.ceil(dt_s / dt));
-    
+    dt=0.05; # integration step
     lag = int(150/dt);
+    sample_period = int(np.ceil(dt_s / dt)); 
     obs = sample_period * N;
-
-    # if run_id % 100 == 0:
-    # print("test " + str(run_id) + " starting");
     s = np.zeros((lag + obs + 1, 2))
-    s[0] = [1.,1.]
+    
+    args = (mu,M);
+    s[0] = s0
+    
     for i in range(lag + obs):
         soln = solve_ivp(fn,[0,dt],s[i],args=args)
-        eps = noise*np.random.randn(2)*np.random.binomial(1,dt/noise_T,size=2);
-        s[i+1] = soln.y[:,-1] + eps;
+        eps = noise*np.random.randn(2)*np.random.binomial(1,dt/noise_T,size=2); # process noise/external perturbation = allow migration over time.
+        s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
         s[i+1][np.where(s[i+1] < 0)] = 0;
 
-    x = s[lag:lag+obs:sample_period,];
+    x = s[lag:lag+obs:sample_period,]; # measurement noise
     for i in range(x.ndim):
-        x[:,i] += 0.001*np.random.randn(x[:,i].size);
+        x[:,i] += 0.001*np.random.randn(x[:,i].size)
 
-    # if run_id % 100 == 0:
-    #     print("test " + str(run_id) + " finished");
-        
-    # plt.plot(x)
-    return [x[:,_] for _ in [0,1]]
-    
-    # return test_with_surr(x.reshape(-1,1));
-
+    return [x[:,_] for _ in [0,1]] 
 #%%%Drafts
 def vis_data(ts, titl = ""):
     fig, ax = plt.subplots(figsize = (10, 2.7))

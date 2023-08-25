@@ -50,6 +50,7 @@ from matplotlib import animation
 from functools import partial
 from matplotlib import patches
 
+plt.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams['axes.linewidth'] = 2
 mpl.rcParams['xtick.major.width'] = 2
 mpl.rcParams['xtick.major.size'] = 7
@@ -110,6 +111,7 @@ from matplotlib import animation
 from functools import partial
 from matplotlib import patches
 
+plt.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams['axes.linewidth'] = 2
 mpl.rcParams['xtick.major.width'] = 2
 mpl.rcParams['xtick.major.size'] = 7
@@ -1707,17 +1709,161 @@ with open('xy_Caroline_LV_asym_competitive_2/pearson_mutual_info_from_choose_r_4
     pickle.dump(reresults, fi)
     
 #%% Check model parameters
+import os, sys, pickle
+os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+
 def load_data(fold):
-    with open(f'Simulated_data/{fold}/ccms_grangers_randphase_100_200_final_2.pkl', 'rb') as fi:
+    with open(f'Simulated_data/{fold}/data.pkl', 'rb') as fi:
         data = pickle.load(fi)
     return data
-        
-randphase = {}
+# ccms_grangers_randphase_100_200_final_2.pkl
+
+data = {}
 for fold in os.listdir('Simulated_data'):
     if 'xy_' in fold:
-        randphase[fold] = load_data(fold)
+        data[fold] = load_data(fold)
         print(fold)
         
+# Vis autocorrelation
+import numpy
+def autocorrelationcorr_BJ(x,acov=False):
+    result = np.zeros(x.size)
+    mean = np.mean(x)
+    if acov:
+        denomenator = x.size;
+    else:
+        denomenator = np.sum((x - mean)**2)
+    # test different distance j from x[t]. the smaller j, the higher result.
+    for j in range(x.size):
+        numerator = 0
+        for t in range(x.size-j):
+            numerator += (x[t] - mean) * (x[t + j] - mean)
+        result[j] = numerator / denomenator
+    return result
+# separately
+def vis_acf(data, name = ''):
+    acf = autocorrelationcorr_BJ(data)
+    fig,ax = plt.subplots()
+    ax.scatter(range(len(acf)),acf)
+    ax.set_title(name)
+    plt.show()
+
+for key, val in data.items():
+    vis_acf(val['data'][0][0],key)
+   
+# all in one
+def vis_acf(ax, data, name = ''):
+    acf = autocorrelationcorr_BJ(data)
+    ax.scatter(range(len(acf)),acf, s = 2)
+    ax.set_title(name)
+    return ax
+fig = plt.figure(figsize= (15,4.5), constrained_layout=True)
+gs = fig.add_gridspec(2, 5)
+ax=[]
+for x in range(2):
+    for y in range(5):
+        ax.append(fig.add_subplot(gs[x,y]))
+x=0
+for key, val in data.items():
+    vis_acf(ax[x], val['data'][0][0],key)
+    x+=1
+plt.show()
+#%% FFT
+import scipy
+
+fig,ax = plt.subplots()
+ax.plot(data['xy_ar_u']['data'][0][0])
+ax.set_title('xy_ar_u_0')
+
+Amp = scipy.fft.fft(data['xy_ar_u']['data'][0][0])
+f = scipy.fft.fftfreq(len(data['xy_ar_u']['data'][0][0]))
+# fig,ax = plt.subplots()
+# ax.plot(scipy.fft.ifft(Amp))
+
+fig, ax = plt.subplots()
+ax.plot(f, Amp)
+plt.show()      
+
+import cmath # complex math, methematics for complex numbers
+import numpy as np
+import matplotlib.pyplot as plt
+def graph_periodic_series(Amp,f,T): 
+    """
+        exp(ix)=cosx+isinx
+    Substitute x = wt with w is angular frequency, then
+        exp(iwt) = cos(wt) + isin(wt)
+    Substitute w = 2*pi*f with f is ordinary frequency, then
+        exp(i2*pi*f*t) = cos(2*pi*f*t) + isin(2*pi*f*t)
+    IDK why I want negative sign but I guess I just used it from some source...
+    """
+    ps = []
+    for t in np.arange(T):
+        ps.append(Amp*cmath.exp(2*np.pi*f*t*1j))
+    
+    return np.array(ps)
+all_ps = []
+for i in range(len(testfreq)):
+    all_ps.append(graph_periodic_series(Amp[i], f[i], 500))
+    # fig,ax = plt.subplots()
+    # ax.plot(all_ps[i])
+    # ax.set_title(f'i: {i}, Amp: {Amp[i]}, f: {f[i]}')
+    # plt.show()
+
+cul_sum = []
+cul_sum.append(all_ps[0]/ 500)
+for i in range(1,len(all_ps)):
+    cul_sum.append(np.add(cul_sum[i-1],all_ps[i]/ 500))
+
+i=499
+fig,ax = plt.subplots()
+ax.plot(cul_sum[i])
+ax.set_title(f'i: 0..{i}, Amp: 0..{Amp[i]}, f: 0..{f[i]}')
+plt.show()
+
+# Verify:
+# np.sum(data['xy_ar_u']['data'][0][0]-cul_sum[499].real)
+# Out[115]: -5.226583055240042e-13
+
+# np.sum(data['xy_ar_u']['data'][0][0]-scipy.fft.ifft(Amp).real)
+# Out[116]: -1.7884131675582893e-14
+
+# np.sum(scipy.fft.ifft(Amp).real-cul_sum[499].real)
+# Out[117]: -5.047741738484213e-13
+
+#%% Granger
+x, y = data['xy_ar_u']['data'][0]
+t = y.shape; # y is surrY matrix
+
+import numpy as np
+from statsmodels.tsa.stattools import grangercausalitytests as granger # for granger
+from statsmodels.tsa.api import VAR # vector autoregression for granger
+
+XY = np.vstack((x,y.T)).T;
+model = VAR(XY); # Vector autoregression
+VARres = model.fit(maxlags=15,ic='aic'); # ??VAR
+# VARres.summary()
+maxlag=np.max([VARres.k_ar, 1])
+#gc = VARres.test_causality(caused='y1',causing='y2');
+#return np.array(gc.test_statistic).reshape(1);
+GCres = granger(XY, [maxlag], verbose=False)
+
+recX_x = GCres[1][1][0].params[0]*x[:-1] + GCres[1][1][0].params[1]
+recX_xy = GCres[1][1][1].params[0]*x[:-1] + GCres[1][1][1].params[1]*y[:-1] + GCres[1][1][1].params[2]
+    
+fig, ax = plt.subplots()
+ax.plot(x[251:301], color = 'green')
+ax.plot(recX_x[250:300], color = 'red')
+ax.plot(recX_xy[250:300], color = 'orange')
+plt.show()
+
+fig, ax = plt.subplots()
+ax.plot(recX_xy)
+plt.show()
+
+ssr_x = np.sum((x[1:]-recX_x)**2)
+ssr_xy = np.sum((x[1:]-recX_xy)**2)
+
+(500-4)*(ssr_x-ssr_xy)/ssr_xy
 #%%
 # Sampling every dt_s
 def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, raise_extinct=0, fn = lotkaVolterra): # ,intx="competitive"
@@ -1916,7 +2062,99 @@ if __name__ == '__main__':
     So we can just pick 2 cases of each stable point and make the stable point cahnges.
     And then varies the parameters. changing s0 is so far not making big impact.
     """
-#%%
-    
+
         
-    
+        # not put negative values to 0 then observe how many 'negative cases could have happened':
+
+        
+        # On average array([  0.  , 237.57]), quantile [0.25,0.5,0.75] of Y are [ 42.25,  84.5 , 126.75], but can not confirm that it's its fault because in such non-linear system, flipping like that would make big difference.
+        # But actually, if we don't need the biological meaning of the system and only care about why we observed such difference between the directions
+        # then we might just try the tests on these dataset with negative values.
+        
+        # Otherwise, we can still let it flip but count the number of flipped. initial count is 1 because initial value of one of them does have 0 ...
+        # Over all integration steps (lag+obs+1) then mean = 377.28, quantile = [326.  , 371.5 , 414.25].
+        # After the lag then mean = 174.42, quantile = [139.75, 172.5 , 202.75]. Can the distribution of these much 'disruption' over 500 points lower the pvalue of certain direction?
+        
+        # So I decided to just run the tests on the negatives.
+        
+        # Change initial values to [2, 1], should still goes around fixed point, neg count has mean 166.25 , quantile [127. , 160.5, 201. ]
+        # Seeing longer periods of positive values so trying to check
+        # Use code similar to LSA
+        # Over all integrations,
+        summary_pos2_0 = np.array([[len(_[2]), np.max(np.array(_[2]))] for _ in data2_0])
+        np.mean(summary_pos2_0,axis = 0)
+        np.max(summary_pos2_0,axis = 0)
+        # there are 387.7 positive period on average. The average length of positive period are 494.72
+        # the most positive periods with no disruption is 544 and can go up to 1012 length
+        # For the last 2500 integrations
+        summary_pos2_0 = np.array([[len(_[2]), np.max(np.array(_[2]))] for _ in data2_0])
+        # 170.49 for mean and 278 for max .# # of disruptions in 2500 integration points
+        # 423.34 for mean and 837 for max .# length of pos_period in 2500 integration points
+        np.quantile(summary_pos2_0[:,0], [.25,.5,.75])
+        np.quantile(summary_pos2_0[:,1], [.25,.5,.75])    
+        # [140., 170., 198.] - # of disruptions
+        # [348.75, 434.5 , 539.75] - # length of pos_period
+        # Vis:
+        pos_period2_0 = [i[2] for i in data2_0]
+        # x = np.range(np.max(summary_pos[0]))
+        fig, ax = plt.subplots(figsize = (10,5))
+        ax.set_xlim(0,np.max(summary_pos2_0[:,0]))
+        for i in pos_period2_0:
+            ax.plot(np.arange(len(i)),np.array(i))
+        # Percentage of positive period that < 100
+        posperiperr2_0 = [np.sum(np.array(_)<100)/len(_) for _ in pos_period2_0] 
+        # On average the number of positive  period that are less than 100 takes up 0.962 of total # positive periods.
+        # per 100 periods, around 25 points are sampled so we might have interuptions every 25 sample points
+        #
+        
+        # 
+        
+    #%%    
+        # raise the extinct species density closer to the dominating ones
+        ARGs = {'dt_s': 0.25, 'N': 500, 's0': np.array([2.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05}
+        # tried raise_extinct = 0.01, 0.02, 0.05, 1; at some point, adding 'extinct' too much gives it too much advantages that it overdominates the other
+        # tried raise initial value of the 0 one to 1
+        data2_1 = []
+        start = time.time()
+        for i in range(reps): 
+            data2_1.append(generate_lv(**ARGs))
+        runtime = time.time() - start
+        filename = '_'.join(['equal']+ [','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGs.values()])
+        savethis = {'data': data2_1, 'datagen_params': ARGs}
+        vis_data(data2_1[0])
+        save_data(filename, savethis, filename)
+        # Neg count of last 2500 integ points (with zero caps): 
+        # 2_0 and 2_1 are kinda similar
+        neg_count2_1 = [i[1] for i in data2_1]
+        
+        summary_pos2_1 = np.array([[len(_[2]), np.max(np.array(_[2]))] for _ in data2_1])
+        np.mean(summary_pos2_1,axis = 0)
+        np.max(summary_pos2_1,axis = 0)
+        # 2_0: mean 170.49 # positive period; mean 423.34 length of positive period 
+        # 2_1:mean 169.75 # positive period; mean 417.94 length of positive period 
+        # 2_0 and 2_1 have similar avg and max
+        # the most positive periods with no disruption is 278 and can go up to 837 length
+        # the most positive periods with no disruption is 284 and can go up to 1234 length
+        # ==> 2_1 in general has less negatives than 2_0 (last 2500 integration points)
+        
+        np.quantile(summary_pos2_1[:,0], [.25,.5,.75])
+        np.quantile(summary_pos2_1[:,1], [.25,.5,.75])    
+        # 2_0: [140., 170., 198.] - # of disruptions
+        # 2_1: [131.25, 173.5 , 201.  ]
+        # 2_0: [348.75, 434.5 , 539.75] - # length of pos_period
+        # 2_1: [295.75, 382.5 , 500.25]
+        
+        # Vis:
+        pos_period2_1 = [i[2] for i in data2_1]
+        # x = np.range(np.max(summary_pos[0]))
+        fig, ax = plt.subplots(figsize = (10,5))
+        ax.set_xlim(0,np.max(summary_pos2_1[:,0]))
+        for i in pos_period2_1:
+            ax.plot(np.arange(len(i)),np.array(i))
+        # Percentage of positive period that < 100
+        posperiperr2_1 = [np.sum(np.array(_)<100)/len(_) for _ in pos_period2_1] 
+        # On average the number of positive  period that are less than 100 takes up 0.959 of total # positive periods.
+        # per 100 periods, around 25 points are sampled so we might have interuptions every 25 sample points
+        #
+        
+        # In general changing (2,0) to (2,1) doesn't change too much as expected.

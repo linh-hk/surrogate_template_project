@@ -18,6 +18,7 @@ import time
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+plt.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams['axes.linewidth'] = 2
 mpl.rcParams['xtick.major.width'] = 2
 mpl.rcParams['xtick.major.size'] = 7

@@ -84,13 +84,13 @@ fig, ax = plt.subplots(3,figsize = (10,2.5))
 for f in range(3):
     x_t = np.ndarray(len(t), dtype=np.complex128)
     for i in range(len(t)): 
-        x_t[i] = graph_part_fourier(freq[f], t[i])
+        x_t[i] = cmath.exp(5j)*(4+f*1j)*graph_part_fourier(freq[f], t[i])
     ax[f].plot(t, x_t)
 plt.show()
 
-fig, ax = plt.subplots(3,figsize = (10,2.5))
-for f in range(3):
-    ax[f].plot(x_t)
+# fig, ax = plt.subplots(3,figsize = (10,2.5))
+# for f in range(3):
+#     ax[f].plot(x_t)
 #%%
 # generate x series from another scripts
 x = data.generate_ar1(400)
