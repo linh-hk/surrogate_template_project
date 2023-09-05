@@ -22,7 +22,7 @@ def generate_AR1_uni_tau1(size):
     # y_series.append(wn_y[0])
     for t in range(size):
         x[t+1] = 0.55*x[t] + -0.25*y[t] + x[t+1]
-        y[t+1] = 0.85*y[t] + y[t+1]
+        y[t+1] = 0.85*y[t]              + y[t+1]
     return [x[:-1], y[:-1]]
 
 # Unidirectional AR(1)
@@ -30,8 +30,8 @@ def generate_AR1_uni_tau2(size):
     print('Generating AR1_uni_tau2')
     x,y = sp.stats.norm.rvs(size = size + 2), sp.stats.norm.rvs(size = size + 2)
     for t in range(1, size+1):
-        x[t+1] = 0.4*x[t] +0.3*y[t-1] + x[t+1]
-        y[t+1] = 0.4* y[t] + y[t+1] 
+        x[t+1] = 0.4 * x[t] + 0.3*y[t-1] + x[t+1]
+        y[t+1] = 0.4 * y[t]              + y[t+1] 
     return [ x[1:-1], y[1:-1] ]
 
 # Unidirectional logistic map
@@ -41,7 +41,7 @@ def generate_uni_logistic_map(size):
     x[0] , y[0] = np.random.uniform(0.2, 0.8) , np.random.uniform(0.2, 0.8)
     for t in range(1, size+500-1):
         x[t] = x[t-1] * (3.5 - 3.5*x[t-1] - 0.1*y[t-1])
-        y[t] = y[t-1]*( 3.8 - 3.8*y[t-1] )
+        y[t] = y[t-1] * (3.8 - 3.8*y[t-1] )
     return [ x[500:], y[500:] ]
 
 # Nonlinearly coupled autoregressive process
@@ -132,8 +132,8 @@ def d_FitzHugh_Nagumo(t, x_w):
     x = x_w[0]
     w = x_w[1]
     epsilon_t = np.random.standard_normal()
-    dx_t = 0.7* (x - x**3 /3 - w + epsilon_t)
-    dw_t = 0.7*0.08* (x + 0.7 -0.8 * w)
+    dx_t =      0.7*(x - x**3 /3 - w + epsilon_t)
+    dw_t = 0.08*0.7*(-0.8*w      + x + 0.7 )
     return np.array([dx_t, dw_t])
 
 # Turns out that 0.7 is Alex's delta t so it seems that we dont need 0.7 in the equation.
@@ -144,8 +144,8 @@ def d_FitzHugh_Nagumo_(t, x_w):
     x = x_w[0]
     w = x_w[1]
     epsilon_t = np.random.standard_normal()
-    dx_t = x - x**3 /3 - w + epsilon_t
-    dw_t = 0.08* (x + 0.7 -0.8 * w)
+    dx_t =          x - x**3 /3 - w + epsilon_t
+    dw_t = 0.08* ( -0.8 * w     + x + 0.7)
     return np.array([dx_t, dw_t])
 
 def generate_FitzHugh_Nagumo(N, dxy_dt = d_FitzHugh_Nagumo, dt_s = 0.25):

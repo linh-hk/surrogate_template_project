@@ -8,12 +8,12 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "randphase_nolag"
+#$ -N "randphase_nolag_fp"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute_LVextra_randphase2.py $1
+python3 -u Simulation_code/run_test/execute_LVextra_randphase_falsepos.py $1
 

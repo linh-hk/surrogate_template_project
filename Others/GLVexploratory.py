@@ -74,10 +74,19 @@ def generate_lv(N, mu, M, s0, fn=lotkaVolterra):
     # return s
 
 def vis_data(data):
-    fig,ax = plt.subplots()
-    ax.plot(data[0])
-    ax.plot(data[1])
-    plt.show()
+    if len(data) ==2:
+        fig,ax = plt.subplots()
+        ax.plot(data[0])
+        ax.plot(data[1])
+        plt.show()
+    else:
+        fig, ax = plt.subplots(2,1,sharex= True)
+        for dat in data:
+            ax[0].plot(dat[0])
+            ax[1].plot(dat[1])
+        ax[0].set_title('Species 1')
+        ax[1].set_title('Species2')
+            
     
 def vis_phase(data):
     if len(data) == 2:
@@ -145,6 +154,24 @@ for S1_0 in np.arange(1,5,1):
         ARGs = {'N': 500, 'mu': mu, 'M': M, 's0':s0}
         many_mut.append(generate_lv(**ARGs))
 vis_phase(many_mut)
+many_mut = []
+for S1_0 in np.arange(6.9,7,0.01):
+    for S2_0 in np.arange(6.9,7,0.01):
+        s0 = np.array([S1_0, S2_0])
+        ARGs = {'N': 500, 'mu': mu, 'M': M, 's0':s0}
+        many_mut.append(generate_lv(**ARGs))
+vis_phase(many_mut)
+
+# "mutualistic2"
+M = [[-0.4,0.5],
+     [0.5,-0.4]];
+many_mut2 = []
+for S1_0 in np.arange(1,5,1):
+    for S2_0 in np.arange(1,5,1):
+        s0 = np.array([S1_0, S2_0])
+        ARGs = {'N': 500, 'mu': mu, 'M': M, 's0':s0}
+        many_mut2.append(generate_lv(**ARGs))
+vis_phase(many_mut2)
 many_mut = []
 for S1_0 in np.arange(6.9,7,0.01):
     for S2_0 in np.arange(6.9,7,0.01):

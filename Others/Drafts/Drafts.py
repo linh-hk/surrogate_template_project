@@ -2158,3 +2158,69 @@ if __name__ == '__main__':
         #
         
         # In general changing (2,0) to (2,1) doesn't change too much as expected.
+        
+#%%
+def load_data(sample, sampleres):
+    with open(f'Simulated_data/{sample}/{sampleres}', 'rb') as fi:
+        res = pickle.load(fi)
+    return res
+def change(res, pmilsa, test):
+    pvals = res['pvals']
+    
+    for thing in pvals:
+        for xory in ['surrX', 'surrY']:
+            
+            thing[1]['score_null_pval'][xory][test]['pearson'] = {'pval': pmilsa['pvals']['pvals'][xory][test]['pearson'][thing[0]]}
+            thing[1]['score_null_pval'][xory][test]['mutual_info'] = {'pval': pmilsa['pvals']['pvals'][xory][test]['mutual_info'][thing[0]]}
+            thing[1]['score_null_pval'][xory][test]['lsa'] = {'pval': pmilsa['pvals']['pvals'][xory][test]['lsa'][thing[0]]}
+            
+            thing[1]['runtime'][xory][test]['pearson'] = pmilsa['pvals']['runtime'][xory][test]['pearson'][thing[0]]
+            thing[1]['runtime'][xory][test]['mutual_info'] = pmilsa['pvals']['runtime'][xory][test]['mutual_info'][thing[0]]
+            thing[1]['runtime'][xory][test]['lsa'] = pmilsa['pvals']['runtime'][xory][test]['lsa'][thing[0]]
+    pvalss = [{_[0]:_[1]} for _ in pvals]
+    
+    res['pvals'] = pvalss
+    res['stats_list'].extend(['pearson','mutual_info','lsa'])
+    return res
+
+def resafe(sample, sampleres, ress):
+    with open(f'Simulated_data/{sample}/{sampleres}', 'wb') as fi:
+        pickle.dump(ress, fi);
+    
+
+samplelist = ['xy_ar_u',
+              'xy_Caroline_LV_asym_competitive',
+              'xy_Caroline_LV_asym_competitive_2',
+              # 'xy_Caroline_LV_asym_competitive_3',
+              # 'xy_Caroline_LV_competitive',
+              # 'xy_Caroline_LV_mutualistic',
+              'xy_Caroline_LV_predprey',
+              'xy_FitzHugh_Nagumo_cont',
+              # 'xy_sinewn',
+              'xy_uni_logistic']
+
+# sample = 'xy_Caroline_LV_asym_competitive'
+for sample in samplelist:
+    pmilsa = load_data(sample, 'pearson_mi_lsa_randphase_twin_tts.pkl')
+
+    # os.listdir(f'Simulated_data/{sample}')
+    for test in ['randphase', 'tts_naive', 'twin']:
+
+        sampleres = f'ccms_grangers_{test}_100_200_final_2.pkl'
+        # test = 'tts_naive'
+        if os.path.isfile(f'Simulated_data/{sample}/{sampleres}'):
+            print(sample, sampleres)
+            res = load_data(sample, sampleres)
+            ress = change(res, pmilsa, test)
+            resafe(sample, sampleres, ress)
+            os.rename(f'Simulated_data/{sample}/{sampleres}', f'Simulated_data/{sample}/{test}_100_200.pkl')
+#%%
+hahadist = []
+for key,val in Res.items():
+    hahadist.extend(val.df['SurrX'])
+    hahadist.extend(val.df['SurrY'])
+for key,val in Res1.items():
+    hahadist.extend(val.df['SurrX'])
+    hahadist.extend(val.df['SurrY'])
+plt.hist(hahadist, bins=[0,25,50,75,100])
+plt.show()
