@@ -375,9 +375,9 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, mode = '', fn = lotkaVolterr
         s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
         s[i+1][np.where(s[i+1] < 0)] = 0;
 
-    x = s[lag:lag+obs:sample_period,]; # measurement noise
+    x = s[lag:lag+obs:sample_period,]; 
     for i in range(x.ndim):
-        x[:,i] += 0.001*np.random.randn(x[:,i].size)
+        x[:,i] += 0.001*np.random.randn(x[:,i].size) # measurement noise
 
     return [x[:,_] for _ in [0,1]] 
 #%%%Drafts

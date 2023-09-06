@@ -88,6 +88,7 @@ class results:
             if 'data' in fi or 'mi' in fi or 'old' in fi:
                 continue
             else:
+            # if 'falsepos' in fi: # load false pos
                 print(f'Loading:{sampdir}/{fi}')
                 with open(f'{sampdir}/{fi}', 'rb') as file:
                     results.append(pickle.load(file))
@@ -181,19 +182,22 @@ def testing(results):
 
 #%% Load results
 if __name__ == "__main__":
+    # ignore = ['EComp_0.25_500_1.0,1.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05', 
+    #           'EMut_0.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05', 
+    #           'equal_ncap_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05']
     Res = {}
     for sample in os.listdir('Simulated_data'):
         if 'xy' in sample or '500' in sample:
             print(sample)
             Res[sample]=results(sample)
     for sample in os.listdir('Simulated_data/LVextra'):
-        if 'xy' in sample or '500' in sample:
+        if 'xy' in sample or '500' in sample:# and sample not in ignore # load false pos
             print(sample)
             Res[sample]=results(sample)
     for key, val in Res.items():
         print(key)
         val.into_df()
-        val.add_CohenKappa()
+        # val.add_CohenKappa()
         
     # test1 = testing(Res['xy_ar_u'])
     # for key, val in Res.items():
@@ -297,7 +301,8 @@ def heatmap(pvaldf, title, test_list, stat_list):
         cbar.ax.tick_params(labelsize = 16)
         cbar.ax.set_ylabel('true positive counts',**font)
         
-        # plt.savefig(f"Simulated_data/Figures/{title}_ml{ml}.svg") 
+        # title = title + '_fp' # load false pos
+        plt.savefig(f"Simulated_data/Figures/{title}_ml{ml}.svg") 
         plt.show()
         
 #%% Draw heatmaps for
