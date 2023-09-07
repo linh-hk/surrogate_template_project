@@ -14,7 +14,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy import stats
 import dill
-import pickle
+import shelve
 
 import sys
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
@@ -59,6 +59,7 @@ Initial data - not detrended - not normalised
 
 #%% Visualising initial data
 # Caroline configuration
+plt.rcParams['svg.fonttype'] = 'none'
 mpl.rcParams['axes.linewidth'] = 1.5
 mpl.rcParams['xtick.major.width'] = 1.5
 mpl.rcParams['xtick.major.size'] = 5
@@ -150,16 +151,7 @@ res_D = _wrapper(SCOR_DOT_D)
 res_DN = _wrapper(SCOR_DOT_DN)
 
 #%% On cluster, run these
-filename = "Real_data/Common species link global echosystems to climate change/SCOR_DOT_cluster_dill.pkl"
-save_this = {}
-for key, vals in globals().items():
-    if type(vals) == type(globals()['os']):
-        continue
-    save_this[key] = vals
-    
-with open('Real_data/Common species link global echosystems to climate change/SCOR_DOT_cluster_pickle.pkl', 'wb') as fi:
-    pickle.dump(save_this, fi);
-
+filename = 'Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_dill.pkl'
 dill.dump_session(filename)
 print(f"Saved at {filename}")
 print(time.time()-start)
