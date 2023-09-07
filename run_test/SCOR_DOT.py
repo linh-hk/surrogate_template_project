@@ -14,6 +14,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy import stats
 import dill
+import pickle
 
 import sys
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
@@ -136,7 +137,7 @@ visualise(SCOR_DOT_DN, processed_status="detrended and normalised", title="Detre
 
 stats_list = "all"
 test_list = ['randphase', 'twin', 'tts']
-maxlag = 5
+maxlag = 0
 
 def _wrapper(df, stats_list=stats_list, test_list=test_list, maxlag=maxlag):
     x = np.array(df["SCOR"])
@@ -149,7 +150,16 @@ res_D = _wrapper(SCOR_DOT_D)
 res_DN = _wrapper(SCOR_DOT_DN)
 
 #%% On cluster, run these
-filename = "Real_data/Common species link global echosystems to climate change/SCOR_DOT_cluster.pkl"
+filename = "Real_data/Common species link global echosystems to climate change/SCOR_DOT_cluster_dill.pkl"
+save_this = {}
+for key, vals in globals().items():
+    if type(vals) == type(globals()['os']):
+        continue
+    save_this[key] = vals
+    
+with open('Real_data/Common species link global echosystems to climate change/SCOR_DOT_cluster_pickle.pkl', 'wb') as fi:
+    pickle.dump(save_this, fi);
+
 dill.dump_session(filename)
 print(f"Saved at {filename}")
 print(time.time()-start)

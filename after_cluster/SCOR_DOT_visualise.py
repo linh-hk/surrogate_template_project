@@ -6,15 +6,15 @@ Created on Sun Jul  9 09:52:12 2023
 """
 import os
 os.getcwd()
-# os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from scipy import stats
+# from scipy import stats
 import dill
-from surrogate_dependence_test import manystats_manysurr
+# from surrogate_dependence_test import manystats_manysurr
 
 #%% Load data
 dill.load_session('Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_final.pkl')

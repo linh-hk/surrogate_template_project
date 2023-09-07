@@ -24,7 +24,7 @@ import numpy as np
 from scipy.spatial import distance_matrix # for twin
 from pyunicorn.timeseries import surrogates #for iaaft
 
-import pickle
+# import pickle
 import dill
 # from multiprocessing import Pool, Process, Queue
 import sys
@@ -285,7 +285,7 @@ def tts(x,y,r):
 #%% Correlation Statistics
 
 from correlation_stats import correlation_Pearson
-from correlation_stats import lsa_new_delay_linh
+from correlation_stats import lsa_new_delay
 from correlation_stats import mutual_info
 from ccm_xory import ccm_predict_surr, ccm_surr_predict
 from granger_xory import granger_predict_surr, granger_surr_predict
@@ -388,7 +388,7 @@ def whichstats(stat, xory):
     if stat == 'pearson':
         stat_fxn = correlation_Pearson
     if stat == 'lsa': 
-        stat_fxn = lsa_new_delay_linh
+        stat_fxn = lsa_new_delay
     if stat == 'mutual_info':
         stat_fxn = mutual_info
     if xory == 'surrY':
