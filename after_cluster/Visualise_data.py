@@ -70,12 +70,13 @@ def vis_data(XY, title):
     Y = XY[1][0:100]
     tmp = np.arange(len(X))
     
-    fig, ax = plt.subplots(figsize=(5,5))
+    fig, ax = plt.subplots(figsize=(5.25,4.125))
     fig.set_tight_layout(True)
     
     ax.plot(X, color = "blue")
     ax.plot(Y, color = "#ff6600")
     ax.legend(["X","Y"], fontsize = 20)
+    ax.set_ylim(-0.25, 2.25)
     ax.set_xlabel('Time index', **font)
     ax.set_ylabel('X and Y value', **font)
     ax.set_title(f'{title}', **font_data)
@@ -85,7 +86,7 @@ def vis_data(XY, title):
     ax.tick_params(labelsize = 17)
     
     plt.savefig(f"Simulated_data/Figures/data/{title}.svg") 
-    # plt.show()
+    plt.show()
     
 #%%
 def vis_valuedistr(XY, title):
@@ -194,19 +195,19 @@ def vis_recurrence_plot(XY, title, eps=0.10, steps=10):
         cbar[i].ax.tick_params(labelsize=17)
         ax[i].set_xlabel("Time", **font)
         ax[i].set_ylabel('Time', **font)
-        ax[i].set_title(f'Recurrence plot of {xory}', **font_data)
+        ax[i].set_title(f'Recurrence plot of {xory}, eps={eps}, steps = {steps}', **font_data)
         ax[i].tick_params(labelsize = 17)
     
     fig.suptitle(title, **font_data)
-    plt.savefig(f"Simulated_data/Figures/recurrence_plot/{title}.svg") 
+    plt.savefig(f"Simulated_data/Figures/recurrence_plot/{title}_{eps}_{steps}.svg") 
     # plt.show() 
 
 # vis_recurrence_plot(data['xy_sinewn']['data'][0], 'xy_ar_u', eps=0.25, steps=10)
  #%% 
 if __name__ == "__main__":    
     for key, val in data.items():
-        # vis_data(val['data'][0], key)
+        vis_data(val['data'][0], key)
         # vis_valuedistr(val['data'][0], key)
         # vis_acf(val['data'][0], key)
         # vis_powerspectrum(val['data'][0], key)
-        vis_recurrence_plot(val['data'][0], key)
+        # vis_recurrence_plot(val['data'][0], key, eps=0.01, steps=20)

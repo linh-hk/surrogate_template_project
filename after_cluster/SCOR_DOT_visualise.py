@@ -13,12 +13,47 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 # from scipy import stats
-import dill
+# import dill
+import pickle
 # from surrogate_dependence_test import manystats_manysurr
+import sys
+sys.path.append('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/Simulation_code/surrogate_dependence_test')
+#%% Draw heatmap as Caroline
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+# import matplotlib.gridspec as gs
+import matplotlib.patheffects as pe
+# import matplotlib.patches as patches
+# import seaborn as sns
+#%%
+# Caroline configuration
+plt.rcParams['svg.fonttype'] = 'none'
+mpl.rcParams['axes.linewidth'] = 1.5
+mpl.rcParams['xtick.major.width'] = 1.5
+mpl.rcParams['xtick.major.size'] = 5
+mpl.rcParams['ytick.major.width'] = 1.5
+mpl.rcParams['ytick.major.size'] = 5
 
-#%% Load data
-dill.load_session('Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_final.pkl')
+mpl.rcParams['hatch.color'] = 'white'
+mpl.rcParams['hatch.linewidth'] = 2
 
+font = {'fontsize' : 16, 'fontweight' : 'bold', 'fontname' : 'arial'}
+# font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color':'white'}
+font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color':'black'}
+# plt.plot(x, y, **font)
+# texts = annotate_heatmap(im, valfmt="{x:.0f}", threshold=0, **font_data)
+
+#%% Load data from cluster and save spydata
+with open('Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_pickle_ml4.pkl', 'rb') as fi:
+    load_res = pickle.load(fi)
+    
+for key in load_res.keys():
+    globals()[key] = load_res[key]
+    
+del load_res
+
+# Load .spydata
+#%%
 stats_list = ['pearson', 'lsa', 'mutual_info', 
               'granger_y->x', 'granger_x->y', 
               'ccm_y->x', 'ccm_x->y']
@@ -46,28 +81,7 @@ pvals = into_df(res)
 pvals_N = into_df(res_N)
 pvals_D = into_df(res_D)
 pvals_DN = into_df(res_DN)
-#%% Draw heatmap as Caroline
-# import matplotlib as mpl
-# import matplotlib.pyplot as plt
-# import matplotlib.gridspec as gs
-import matplotlib.patheffects as pe
-# import matplotlib.patches as patches
-# import seaborn as sns
-
-# Caroline configuration
-mpl.rcParams['axes.linewidth'] = 1.5
-mpl.rcParams['xtick.major.width'] = 1.5
-mpl.rcParams['xtick.major.size'] = 5
-mpl.rcParams['ytick.major.width'] = 1.5
-mpl.rcParams['ytick.major.size'] = 5
-
-mpl.rcParams['hatch.color'] = 'white'
-mpl.rcParams['hatch.linewidth'] = 2
-
-font = {'fontsize' : 16, 'fontweight' : 'bold', 'fontname' : 'arial'}
-# font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color':'white'}
-font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color':'black'}
-
+#%% Draw heatmaps
 # Take from web
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
                      textcolors=("black", "white"),
@@ -105,18 +119,18 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     return texts
 
 # https://matplotlib.org/stable/tutorials/colors/colorbar_only.html
-def heatmap(pvaldf, title, test_list = test_list):
+def heatmap(pvaldf, title, test_list = test_list, stat_list = stats_list):
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["stats"], columns = ["surrogate_test", "xory"])
     col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
-    draw = df.loc[:,col]
+    draw = df.loc[stat_list,col]
     
-    fig = plt.figure(figsize = (7,5.5), constrained_layout = True) # figsize = (,), constrained_layout = True
+    fig = plt.figure(figsize = (8,5.5), constrained_layout = True) # figsize = (,), constrained_layout = True
     grid = fig.add_gridspec(nrows = 1, 
                             ncols = len(test_list)+1, 
                             width_ratios = [1,1,1,0.25],
                             hspace = 0, wspace = 0.05)
     # cmap = mpl.cm.cool.with_extremes(over='0.25', under="0.75")
-    cmap = (mpl.colors.ListedColormap(['magenta'])).with_extremes(under='cyan')
+    cmap = (mpl.colors.ListedColormap(['#2a9d8f'])).with_extremes(under='#f4a261')
     bounds = [0.0500000001, 1]
     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     for i, cst in enumerate(test_list):
@@ -153,22 +167,25 @@ def heatmap(pvaldf, title, test_list = test_list):
                         cax=cbar_ax, 
                         extend='min', 
                         ticks=bounds, 
-                        spacing='proportional', 
-                        label='pvalue')
+                        spacing='proportional'#, label='pvalue'
+                        )
     # cbar = fig.colorbar(im, cax=cbar_ax, ticks = [0.05, 0.25,0.50,0.75,1])
     cbar.ax.tick_params(labelsize = 16)
-    plt.show()
+    cbar.ax.set_ylabel('p-value',**font)
     
-    plt.savefig(f"Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_heatmap/{title}_retts.svg")
+    plt.savefig(f"Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_heatmap/{title}_ml4.svg")
+    plt.show()    
+    
 #%%
-stats_list = ['pearson', 'lsa', 'mutual_info', 
-              'granger_y->x', 'granger_x->y', 
-              'ccm_y->x', 'ccm_x->y']
-test_list = ['randphase', 'twin', 'tts']
-heatmap(pvals, "Initial data - not detrended - not normalised", test_list=test_list)
-heatmap(pvals_N, "Normalised without detrending data", test_list=test_list)
-heatmap(pvals_D, "Detrended without normalisation", test_list=test_list)
-heatmap(pvals_DN, "Detrended and normalised data", test_list=test_list)
+if __name__ == "__main__":
+    stats_list = ('pearson', 'lsa', 'mutual_info', 
+                  'granger_y->x', 'granger_x->y', 
+                  'ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    heatmap(pvals, "Initial data - not detrended - not normalised", test_list=test_list, stat_list = stats_list)
+    heatmap(pvals_N, "Normalised without detrending data", test_list=test_list, stat_list = stats_list)
+    heatmap(pvals_D, "Detrended without normalisation", test_list=test_list, stat_list = stats_list)
+    heatmap(pvals_DN, "Detrended and normalised data", test_list=test_list, stat_list = stats_list)
 
 # def draw_heatmap_xory(xory_pvals, test_list, axes, ax_idx, cbar_ax):
 #     heatmap_drawthis = pd.DataFrame.from_dict(xory_pvals, orient = 'index')

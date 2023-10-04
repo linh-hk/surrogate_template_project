@@ -6,7 +6,7 @@ Created on Sat Jul  8 08:27:53 2023
 @author: h_k_linh
 """
 import os
-# os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test')
 print(f'working directory: {os.getcwd()}')
 import scipy as sp
@@ -91,7 +91,12 @@ def vis_data(data):
 def vis_phase(data):
     if len(data) == 2:
         fig,ax = plt.subplots()
-        ax.scatter(data[0], data[1], s=2)
+        ax.scatter(data[0], data[1], s=2, color = 'black')
+        # ax.set_title('gLV predator prey limit cycle', **font)
+        # ax.tick_params(labelsize = 24)
+        # ax.set_xlabel('Predator', **font)
+        # ax.set_ylabel('Prey', **font)
+        # plt.savefig("Simulated_data/Figures/data/gLV_predprey_limit_cycle.svg")
         plt.show()
     else:
         fig, ax = plt.subplots()
@@ -115,7 +120,7 @@ mu = np.array([1.1,-0.4]);
 M = np.array([[0.0,-0.4],
               [0.1,0.0]]);
 s0 = np.array([1.,1.])
-ARGs = {'N': 500, 'mu': mu, 'M': M, 's0':s0}
+ARGs = {'N': 1000, 'mu': mu, 'M': M, 's0':s0}
 s = generate_lv(**ARGs)
 vis_phase(s)
 
@@ -203,6 +208,8 @@ for S1_0 in np.arange(1,5,1):
         ARGs = {'N': 500, 'mu': mu, 'M': M, 's0':s0}
         many_asymcomp2.append(generate_lv(**ARGs))
 vis_phase(many_asymcomp2)
+vis_data(many_asymcomp2)
+
 
 
 # "asym_competitive_2_rev"

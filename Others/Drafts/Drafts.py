@@ -381,6 +381,7 @@ anim_y.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/B
 anim_x = animation.FuncAnimation(fig, draw_each_frame_one_x, fargs = (ytwin, x_surr_twin, pcor_record_twin_x), frames = 99)
 anim_x.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_x_twin.gif', writer = 'pillow', fps = 8)
 #%% Vis tts
+
 def choose_r(n):
     delta = (n/4 + 1) % 20
     return int(n/4 - delta)
@@ -419,12 +420,13 @@ pcor_record_tts_x = np.zeros(pos.shape[0]) # code old tts does not return .T and
 for i in range(0,pos.shape[0]):
         pcor_record_tts_x[i] = round(float(pearsonr(x_surr_tts[i,:], ystar).statistic), 3)
 
+
+#%%
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from functools import partial
 from matplotlib import patches
-#%%
 
 def draw_each_frame_tts(frame_num, ax, data, y_surr, y_pos, pcor_record):
     i = frame_num
@@ -439,7 +441,7 @@ def draw_each_frame_tts(frame_num, ax, data, y_surr, y_pos, pcor_record):
     ax[1].set_xlim(0,100)
     #         # 
     ax[1].plot(data[1], color = "#ff6600")
-    ax[1].set_ylim(6.9,7.15)
+    ax[1].set_ylim(6.92,7.13)
     
     ax[1].set_xlabel('Time point (t)', fontsize = 22, fontweight = 'bold', fontname = 'arial')
     ax[1].tick_params(labelsize = 17)
@@ -451,11 +453,11 @@ def draw_each_frame_tts(frame_num, ax, data, y_surr, y_pos, pcor_record):
     rect = patches.Rectangle((pos[i,0], 6.925), 62, 0.2, edgecolor='r', facecolor='none')#, linewidth=1
     ax[1].add_patch(rect)
     #         # ax.tick_params(labelsize = 12)
-    ax[1].text(pos[i,0]+12, 7.1525, r'$\rho =$' + f"{pcor_record[i]}", fontsize = 24, color = colorr)
+    ax[1].text(pos[i,0]+12, 7.1325, r'$\rho =$' + f"{pcor_record[i]}", fontsize = 24, color = colorr)
     # ax[1].tick_params(labelsize = 17)
     return ax
 
-fig, ax = plt.subplots(1, 2, figsize=(9,5))
+fig, ax = plt.subplots(1, 2, figsize=(9,4.8))
 fig.set_tight_layout(True)
 ax[0].set_xlim(0,100)
 # ax[1].set_xlim(0,100)
@@ -463,7 +465,7 @@ ax[0].set_xlim(0,100)
 # pcor = round(float(pearsonr(xstar, y_surr[0,:]).statistic), 3)
 ax[0].plot(data[0], color = "blue")#, linewidth = 1
 ax[0].legend(["X"], fontsize = 20, loc = "upper right")
-ax[0].set_ylim(6.9,7.15)
+ax[0].set_ylim(6.92,7.13)
 ax[0].set_xlabel('Time point (t)', fontsize = 22, fontweight = 'bold', fontname = 'arial')
 # ax[0].set_ylabel('X and Y value', fontsize = 22, fontweight = 'bold', fontname = 'arial')
 ax[0].tick_params(labelsize = 17)
@@ -478,12 +480,16 @@ ax[0].plot(pos[0,:], xstar, color = "red")#, linewidth = 1.1
 ax[0].scatter(pos[0,:], xstar, color = "red", s = 5)
 rect = patches.Rectangle((pos[0,0], 6.925), 62, 0.2, edgecolor='r', facecolor='none')#, linewidth=1
 ax[0].add_patch(rect)
+
+# 0, 18, 19, 20, 21
+ax = draw_each_frame_tts(21, ax, data, y_surr_tts, pos, pcor_record_tts_y)
+plt.savefig(f"plots/tts_21.svg")
     
-anim_y = animation.FuncAnimation(fig, draw_each_frame_tts, fargs = (ax, data, y_surr_tts, pos, pcor_record_tts_y), frames = 39)# , blit = True, interval = 500
-# anim.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/test_tts.mp4', writer = 'ffmpeg', fps = 2)
-anim_y.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts_y.gif', writer = 'pillow', fps = 8)
-# anim.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts.mp4', writer = 'ffmpeg', fps = 8)
-# anim_y.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts_y.gif', writer = 'pillow', fps = 8)
+# anim_y = animation.FuncAnimation(fig, draw_each_frame_tts, fargs = (ax, data, y_surr_tts, pos, pcor_record_tts_y), frames = 39)# , blit = True, interval = 500
+# # anim.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/test_tts.mp4', writer = 'ffmpeg', fps = 2)
+# anim_y.save('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts_y.gif', writer = 'pillow', fps = 8)
+# # anim.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts.mp4', writer = 'ffmpeg', fps = 8)
+# # anim_y.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts_y.gif', writer = 'pillow', fps = 8)
 #%%
 
 def draw_each_frame_tts_surrx(frame_num, ax, data, x_surr, x_pos, pcor_record):
@@ -1606,7 +1612,7 @@ sum(np.subtract(np.sort(pvals_full['surrY']['ccm_y->x']['tts_119']), np.sort(pva
 
 [np.where(_ == pvals_full['surrY']['ccm_y->x']['tts_119']) for _ in pvals_onetenth['surrY']['ccm_y->x']['tts_119']]
 
-#%%
+#%% binomial cutoff
 from scipy.stats import binom
 # reps is number of trials  
 reps  = 10000
@@ -2224,3 +2230,17 @@ for key,val in Res1.items():
     hahadist.extend(val.df['SurrY'])
 plt.hist(hahadist, bins=[0,25,50,75,100])
 plt.show()
+#%%
+for sample in os.listdir('Simulated_data'):
+    if 'xy_' in sample:
+        sampdir = f'Simulated_data/{sample}'
+        for fi in os.listdir(sampdir):
+            if 'falsepos' in fi:                
+                print(f'Loading:{sampdir}/{fi}')
+                with open(f'{sampdir}/{fi}', 'rb') as file:
+                    falsepos = pickle.load(file)
+                newpvals = [{_[0]: _[1]} for _ in falsepos['pvals']]
+                falsepos['pvals'] = newpvals
+                
+                with open(f'{sampdir}/{fi}', 'wb') as file:
+                    pickle.dump(falsepos, file)

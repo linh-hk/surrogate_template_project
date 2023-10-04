@@ -321,7 +321,7 @@ def scan_lags(x,y,statistic,maxlag=5,kw_statistic={}):
             score[:,_[0]] = np.array(_[1])
     return np.vstack((lags,score));
 
-def create_surr(x, y, surr, r_tts = choose_r):
+def create_surr(x, y, surr, kw_randphase, kw_twin, r_tts, r_naive):
     print("\t\t\tGet surrogates")
     if surr == 'perm':
         surr_fxn = get_perm_surrogates
@@ -341,13 +341,13 @@ def create_surr(x, y, surr, r_tts = choose_r):
         xstar = x
         ystar = y
         test_params['no params'] = None
-        surr = surr_fxn(y);
+        surr = surr_fxn(y, **kw_twin);
     if surr_fxn in [get_circperm_surrogates, get_iaaft_surrogates]:
         k_start,k_end = trim_periodic_data(y);
         test_params['trim kstart_kend'] = [k_start,k_end]
         xstar = x[k_start:k_end+1]
         ystar = y[k_start:k_end+1]
-        surr = surr_fxn(ystar);
+        surr = surr_fxn(ystar, **kw_randphase);
     if surr_fxn == tts:
         if type(r_tts) is type(1): # if manually pick r
             r = r_tts
@@ -358,10 +358,10 @@ def create_surr(x, y, surr, r_tts = choose_r):
         xstar, ystar, surr = tts(x, y, r)
     return xstar, ystar, surr, test_params
 
-def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False):     
+def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False, kw_statistic):     
     #find statistic from original data
     print("\t\t\t\tCalculating original stats with scan_lags")
-    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic,maxlag)
+    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic,maxlag, kw_statistic)
     score = np.max(scanlag[1]); # no np.max in test_bad
     
     # sometimes twin produce surrogates shorter than original series (example: FitzHugh_Nagumo_cont[14] embed_dim =3, tau = 1, the surr is only 498)
@@ -371,7 +371,7 @@ def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False):
     #find null statistic for each surrogate 
     #using same maximizing procedure as original
     print("\t\t\t\tCalculating null stats with scan_lags")
-    scanlagsurr = scan_lags(xstar,surr,statistic,maxlag)
+    scanlagsurr = scan_lags(xstar,surr,statistic,maxlag, kw_statistic)
     null = np.max(scanlagsurr[1:],axis=1);
     
     #one tailed test
@@ -412,23 +412,23 @@ def whichstats(stat, xory):
     return stat_fxn
     # 'pcc_param', 'granger_param_y->x', 'granger_param_x->y'
     
-def iter_stats(a, b, surr, stats_list, maxlag, xory):#
+def iter_stats(a, b, surr, stats_list, maxlag, xory, kw_randphase, kw_twin, r_tts, r_naive, kw_statistic):#
     # print(a[0], b[0], stats_list, maxlag, xory)
     # res = ['pvals': {}, 'runtimes': {}, 'test_params': {}]
     test_params = {'maxlag': maxlag}
-    A, B, SURR, test_params['surr_params'] = create_surr(a, b, surr)
+    A, B, SURR, test_params['surr_params'] = create_surr(a, b, surr, kw_randphase, kw_twin, r_tts, r_naive)
     pvals = {}
     runtimes = {}
     for stat in stats_list:
         print(f'Running {stat} in many stats for Y or X surr')
         stat_fxn = whichstats(stat, xory)
         start = time.time()
-        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag)
+        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, kw_statistic)
         runtimes[stat] = time.time() - start
     return pvals, runtimes, test_params
    
 # from multiprocessing import Pool 
-def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, kw_randphase={}, kw_bstrap={}, kw_twin={}, r_tts=choose_r, r_naive=choose_r):
+def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, kw_randphase={}, kw_twin={}, r_tts=choose_r, r_naive=choose_r, kw_statistic={}):
     if test_list == 'all':
         test_list = ['randphase', 'bstrap', 'twin','tts', 'tts_naive', 'circperm','perm']
     if stats_list == 'all':
@@ -444,8 +444,8 @@ def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, kw_ran
     test_params = {'surrY': {}, 'surrX': {}}
     
     for surr in test_list:
-        ARGsurrY = (x, y, surr, stats_list, maxlag, 'surrY')# 
-        ARGsurrX = (y, x, surr, stats_list, maxlag, 'surrX')# 
+        ARGsurrY = (x, y, surr, stats_list, maxlag, 'surrY', kw_randphase, kw_twin, r_tts, r_naive, kw_statistic)# 
+        ARGsurrX = (y, x, surr, stats_list, maxlag, 'surrX', kw_randphase, kw_twin, r_tts, r_naive, kw_statistic)# 
         print(f'Running {surr} for Y')
         score_null_pval['surrY'][surr], runtime['surrY'][surr], test_params['surrY'][surr] = iter_stats(*ARGsurrY)
         print(f'Running {surr} for X') 
