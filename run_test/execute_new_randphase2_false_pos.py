@@ -51,12 +51,12 @@ def load_results_params(data_name):
 def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     x = pair[0]
     y = pair[1]
-    return [pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)]
+    return {pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)}
 
 if __name__=="__main__":
     stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
     test_list = ['randphase'] # , 'twin','randphase'
-    maxlag = 4
+    maxlag = 0
     
     print(f"Loading {sys.argv[1]} data, {int(sys.argv[2])} {time.time()}")
     data, datagen_param = load_results_params(f'{sys.argv[1]}')
@@ -79,9 +79,8 @@ if __name__=="__main__":
              'stats_list' : stats_list,
              'test_list' : test_list}
     
-    tests = '_'.join(['ccms', 'grangers'] + test_list +
-                     [str(sys.argv[2]), str(int(sys.argv[2])+100)] + ['final'])
-    with open(f'Simulated_data/{sys.argv[1]}/{tests}_2.pkl', 'wb') as fi:
+    tests = '_'.join(test_list +[str(sys.argv[2]), str(int(sys.argv[2])+100)] + ['nolag','falsepos'])
+    with open(f'Simulated_data/{sys.argv[1]}/{tests}.pkl', 'wb') as fi:
         pickle.dump(saveP, fi);
             
             #np.savetxt(fname,resultsList);

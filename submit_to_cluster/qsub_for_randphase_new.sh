@@ -15,5 +15,5 @@
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute_LVextra_randphase_falsepos.py $1
+python3 -u Simulation_code/run_test/execute_new_randphase2_false_pos.py $1 $2
 

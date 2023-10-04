@@ -8,11 +8,11 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "tts_nolag_fp"
+#$ -N "twin_nolag"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute_new_tts2_false_pos.py $1 $2
+python3 -u Simulation_code/run_test/execute_LVextra_twin.py $1

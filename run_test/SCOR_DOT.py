@@ -138,7 +138,7 @@ visualise(SCOR_DOT_DN, processed_status="detrended and normalised", title="Detre
 
 stats_list = "all"
 test_list = ['randphase', 'twin', 'tts']
-maxlag = 0
+maxlag = 4
 
 def _wrapper(df, stats_list=stats_list, test_list=test_list, maxlag=maxlag):
     x = np.array(df["SCOR"])
@@ -151,7 +151,7 @@ res_D = _wrapper(SCOR_DOT_D)
 res_DN = _wrapper(SCOR_DOT_DN)
 
 #%% On cluster, run these
-filename = 'Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_dill.pkl'
+filename = 'Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_dill_ml4.pkl'
 dill.dump_session(filename)
 print(f"Saved at {filename}")
 print(time.time()-start)

@@ -12,7 +12,7 @@ What it does is:
         The second argument from the qsub script specifies which pairs of time series (index of simulated data) will be run. This came about because I simulated 1000 simulations in total and only want to run test on 100 simulations per run.
     Run the dependence test on the data in parallel and save results on cluster.
 Note:
-This script particularly use the tts protocol to general surrogate test
+This script particularly use the randomphase protocol to general surrogate test
 The imported data is changed to test for false positive rate in this script
 Integrated multiprocessor into the workflow ('new' in file name)
 This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
@@ -42,17 +42,21 @@ def load_results_params(data_name):
     fi = f"Simulated_data/{data_name}/data.pkl"
     with open(fi, 'rb') as file:
         data = pickle.load(file)
-    return data['data'], data['datagen_params']
+    # for false pos
+    num_trials = data['datagen_params']['N']
+    data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
+              for _ in range(num_trials)]
+    return data_fp, data['datagen_params']
 
 def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     x = pair[0]
     y = pair[1]
-    return [pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)]
+    return {pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)}
 
 if __name__=="__main__":
     stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
     test_list = ['tts_naive'] # , 'twin','randphase'
-    maxlag = 4
+    maxlag = 0
     
     print(f"Loading {sys.argv[1]} data, {int(sys.argv[2])} {time.time()}")
     data, datagen_param = load_results_params(f'{sys.argv[1]}')
@@ -75,9 +79,8 @@ if __name__=="__main__":
              'stats_list' : stats_list,
              'test_list' : test_list}
     
-    tests = '_'.join(['ccms', 'grangers'] + test_list +
-                     [str(sys.argv[2]), str(int(sys.argv[2])+100)] + ['final'])
-    with open(f'Simulated_data/{sys.argv[1]}/{tests}_2.pkl', 'wb') as fi:
+    tests = '_'.join(test_list +[str(sys.argv[2]), str(int(sys.argv[2])+100)] + ['nolag','falsepos'])
+    with open(f'Simulated_data/{sys.argv[1]}/{tests}.pkl', 'wb') as fi:
         pickle.dump(saveP, fi);
             
             #np.savetxt(fname,resultsList);

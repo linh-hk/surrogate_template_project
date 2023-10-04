@@ -53,7 +53,7 @@ def load_data(data_name):
 def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     x = pair[0]
     y = pair[1]
-    return [pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)]
+    return {pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)}
 
 if __name__=="__main__":
     stats_list = ['ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
