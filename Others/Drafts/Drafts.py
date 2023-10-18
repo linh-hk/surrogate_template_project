@@ -491,7 +491,6 @@ plt.savefig(f"plots/tts_21.svg")
 # # anim.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts.mp4', writer = 'ffmpeg', fps = 8)
 # # anim_y.save('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/COURSES/BIOS0010 Biosciences Research Skills/Assignment2 Video log/surr_tts_y.gif', writer = 'pillow', fps = 8)
 #%%
-
 def draw_each_frame_tts_surrx(frame_num, ax, data, x_surr, x_pos, pcor_record):
     i = frame_num
     if i == 0:
@@ -1211,6 +1210,21 @@ ax.set_xlabel("Normally distributed values", fontsize = 20)
 ax.set_title("Cumulative distribution of \nnormally distributed values", fontsize = 17, fontweight = "bold")
 ax.axvline(x=0, linewidth = 0.75, linestyle=":", color = "red")
 ax.tick_params(labelsize = 17)
+    #%%% Draw normal distribution, 2-tailed test
+    x = np.linspace(-4, 4, 1000)
+    y = stats.norm.pdf(x, loc=0, scale=1)
+    x_ = stats.norm.ppf(1-0.05/2, loc=0, scale=1)
+    fig, ax = plt.subplots()
+    fig.set_tight_layout(True)
+    ax.scatter(x,y, s=1, color = "black")
+    ax.set_ylabel("Probability density", fontsize = 20)
+    ax.set_xlabel("Correlation values", fontsize = 20)
+    ax.set_title("An example of a\nnull distribution", fontsize = 22, fontweight = "bold")
+    ax.fill_between(x = x, y1 = y, where = (x<-x_)|(x_<x), color = 'blue', alpha = 0.2)
+    ax.axvline(x=x_, linewidth = 0.75, linestyle=":", color = "blue")
+    ax.axvline(x=-x_, linewidth = 0.75, linestyle=":", color = "blue")
+    ax.tick_params(labelsize = 17)
+    plt.show()
 
 #%% LSA transform
 from matplotlib.patches import Rectangle
@@ -1354,7 +1368,7 @@ Xpos =
 #%% Generate xy_Caroline_mutualisitic data
 import GenerateData as dataGen
 
-with open('xy_Caroline_CH_competitive/data.pkl','rb') as fi:
+with open('Simulated_data/xy_Caroline_CH_competitive/data.pkl','rb') as fi:
     test1 = pickle.load(fi)
     
 datagen_param = test['datagen_params']
