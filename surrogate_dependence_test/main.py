@@ -358,7 +358,7 @@ def create_surr(x, y, surr, kw_randphase, kw_twin, r_tts, r_naive):
         xstar, ystar, surr = tts(x, y, r)
     return xstar, ystar, surr, test_params
 
-def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False, kw_statistic):     
+def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False, kw_statistic = {}):     
     #find statistic from original data
     print("\t\t\t\tCalculating original stats with scan_lags")
     scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic,maxlag, kw_statistic)
@@ -412,7 +412,7 @@ def whichstats(stat, xory):
     return stat_fxn
     # 'pcc_param', 'granger_param_y->x', 'granger_param_x->y'
     
-def iter_stats(a, b, surr, stats_list, maxlag, xory, kw_randphase, kw_twin, r_tts, r_naive, kw_statistic):#
+def iter_stats(a, b, surr, stats_list, maxlag, xory, kw_randphase, kw_twin, r_tts, r_naive, kw_statistic = {}):#
     # print(a[0], b[0], stats_list, maxlag, xory)
     # res = ['pvals': {}, 'runtimes': {}, 'test_params': {}]
     test_params = {'maxlag': maxlag}
@@ -423,7 +423,7 @@ def iter_stats(a, b, surr, stats_list, maxlag, xory, kw_randphase, kw_twin, r_tt
         print(f'Running {stat} in many stats for Y or X surr')
         stat_fxn = whichstats(stat, xory)
         start = time.time()
-        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, kw_statistic)
+        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, kw_statistic = kw_statistic)
         runtimes[stat] = time.time() - start
     return pvals, runtimes, test_params
    
