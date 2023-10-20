@@ -13,7 +13,7 @@ The scripts are organised into 4 main sectors:
     Current working directory: `$ PROJPATH=$(pwd)`
     Clone the git repos under the name Simulation_code which means that the cloned repos will be at `${PROJPATH}/surrogate_template_project` and you will rename the "surrogate_template_project" into "Simulation_code" or directly with git clone:
     
-    `git clone https://github.com/linh-hk/surrogate_template_project/tree/main Simulation_code`
+    `git clone https://github.com/linh-hk/surrogate_template_project.git Simulation_code`
     
   Step2: Adjust the scripts to make sure the directories are correct
   
