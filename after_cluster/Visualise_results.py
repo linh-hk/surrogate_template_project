@@ -9,7 +9,7 @@ Visualise
 """
 import os
 os.getcwd()
-os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 os.getcwd()
 import glob
@@ -136,10 +136,10 @@ def merge_data(results, test_list, stat_list):
                  for lagkey, lagitm in pvalss.items()}
     except:
         runtime = 'not available'
-    test_params = {lagkey: merge(*[trial['test_params'] for trial in lagitm.values()]) for lagkey, lagitm in pvalss.items()}
+    test_params = {lagkey: merge(*[trial['test_params'] for key,trial in lagitm.items() if key != 'XY']) for lagkey, lagitm in pvalss.items()}
     
     pvals = {lagkey: {xory : {cst : {stat : [trial['score_null_pval'][xory][cst][stat]['pval'] 
-                                        for idx, trial in lagitm.items()]
+                                        for idx, trial in lagitm.items() if idx != 'XY']
                                 for stat in stat_list}
                          for cst in test_list}
                   for xory in ['surrY', 'surrX']}
@@ -164,18 +164,18 @@ class results:
         
         results = []
         for fi in os.listdir(sampdir):
-            if 'data' in fi or 'mi' in fi or 'old' in fi or 'falsepos' in fi:
+            if 'data' in fi or 'falsepos' in fi :
                 continue
-            else:
+            elif 'normalise' in fi:
                 print(f'Loading:{sampdir}/{fi}')
                 with open(f'{sampdir}/{fi}', 'rb') as file:
                     results.append(pickle.load(file))
-        falsepos = []
+        '''falsepos = []
         for fi in os.listdir(sampdir):
             if 'falsepos' in fi:                
                 print(f'Loading:{sampdir}/{fi}')
                 with open(f'{sampdir}/{fi}', 'rb') as file:
-                    falsepos.append(pickle.load(file))
+                    falsepos.append(pickle.load(file))'''
         
         stat_list = ('pearson', 'lsa', 'mutual_info', 
                       'granger_y->x', 'granger_x->y', 
@@ -217,7 +217,7 @@ class results:
         # pvals = merge(pvals, tts_pvals)
         
         maxlag, runtime0, test_params, test_list0, pvals = merge_data(results, test_list, stat_list)
-        fp_maxlag, fp_runtime, fp_test_params, fp_test_list, fp_pvals = merge_data(falsepos, test_list, stat_list)
+        ''' fp_maxlag, fp_runtime, fp_test_params, fp_test_list, fp_pvals = merge_data(falsepos, test_list, stat_list)'''
         
         # self.results = {'stat_list': stat_list, 'test_list': test_list, 'test_params': test_params, 'runtime': runtime, 'pvals': pvals}
         self.stat_list = stat_list
@@ -226,11 +226,11 @@ class results:
         self.runtime = runtime0
         self.maxlag = list(maxlag)
         self.pvals = pvals
-        self.fp_maxlag = fp_maxlag
+        '''self.fp_maxlag = fp_maxlag
         self.fp_test_list = fp_test_list
         self.fp_runtime = fp_runtime
         self.fp_test_params = fp_test_params
-        self.fp_pvals = fp_pvals
+        self.fp_pvals = fp_pvals'''
         self.n_trial = list(set([len(sublist['pvals']) for sublist in results]))
         
     def into_df(self, model_name = '', falsepos = False): # faster than into_df2 - runtime= 0.21683335304260254
@@ -400,7 +400,7 @@ def add_hash_ckchi2(df, axs):
     # return axs
 
 # https://matplotlib.org/stable/tutorials/colors/colorbar_only.html
-def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = False):
+def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = False, savehere = '', filextsn = 'svg'):
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     maxlag = set(df.index.get_level_values(0))
     col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
@@ -473,14 +473,16 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
         cbar.ax.tick_params(labelsize = 16)
         cbar.ax.set_ylabel('true positive counts',**font)
         
-        if ckchi2:
-            savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}/{title}_ml{ml}.svg"
-        if falsepos:
-            title = title + '_fp' # load falsepos
-            savehere = f"Simulated_data/Figures/falsepos/{title}_ml{ml}.svg"
-        else:
-            savehere = f"Simulated_data/Figures/heatmap_results/{title}_ml{ml}.svg"
-        plt.savefig(f"{savehere}") 
+        
+        if savehere == '':
+            if ckchi2:
+                savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}"
+            if falsepos:
+                title = title + '_fp' # load falsepos
+                savehere = "Simulated_data/Figures/falsepos"
+            else:
+                savehere = "Simulated_data/Figures/heatmap_results"
+        plt.savefig(f"{savehere}/{title}_ml{ml}.{filextsn}") 
         plt.show()
         
 def heatmap2(pvaldf, title, test_list, stat_list): # , falsepos = False
@@ -633,3 +635,24 @@ if __name__ == "__main__":
         #     heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
         # if 'EComp' in key:
             # heatmap3(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
+#%% Visualise normalised special cases:
+    samplelist = ['xy_Caroline_LV_asym_competitive', 
+                  'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
+                  'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
+    Res = {}
+    for sample in samplelist:
+        Res[sample] = results(sample)
+        print(sample)
+        
+    for key, val in Res.items():
+        val.into_df()
+        
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
+    # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
+    for key, val in Res.items():
+        # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
+        heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list, 
+                savehere='C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/normalised',
+                filextsn='svg')

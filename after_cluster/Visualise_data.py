@@ -9,7 +9,7 @@ Visualise data
 
 import os
 os.getcwd()
-os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 os.getcwd()
 # import glob
@@ -65,18 +65,33 @@ if __name__ == "__main__":
             data[sample] = load_data(sample)
             print(sample)
 #%% 
-def vis_data(XY, title):
+def viss(ts, titl = ""):
+    fig, ax = plt.subplots(figsize = (5, 5))
+    ax.set_title(titl)
+    ax.set_xlabel('Time index', **font)
+    ax.set_ylabel('Series value', **font)
+    ax.set_title(f'{titl}', **font_data)
+    ax.tick_params(labelsize = 17)
+    ax.plot(ts, color = "blue")
+    ax.legend(["series"], fontsize = 20)    
+    ax.scatter(range(len(ts)), ts, color = "blue", s = 5)
+    
+def vis_data(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     X = XY[0][0:100]
     Y = XY[1][0:100]
     tmp = np.arange(len(X))
     
-    fig, ax = plt.subplots(figsize=(5.25,4.125))
+    
+    
+    fig, ax = plt.subplots(figsize=(5.25, 4.125))
     fig.set_tight_layout(True)
     
     ax.plot(X, color = "blue")
     ax.plot(Y, color = "#ff6600")
     ax.legend(["X","Y"], fontsize = 20)
-    ax.set_ylim(-0.25, 2.25)
+    # minv = -3 # XY.min() # -0.25 
+    # maxv = 3 # XY.max() # 2.25 
+    # ax.set_ylim(minv, maxv)
     ax.set_xlabel('Time index', **font)
     ax.set_ylabel('X and Y value', **font)
     ax.set_title(f'{title}', **font_data)
@@ -85,11 +100,14 @@ def vis_data(XY, title):
 
     ax.tick_params(labelsize = 17)
     
-    plt.savefig(f"Simulated_data/Figures/data/{title}.svg") 
+    # if not os.path.exists(f"{saveto}/data/"):
+    #     os.makedirs(f"{saveto}/data/")
+    # plt.savefig(f"{saveto}/data/{title}.{filextsn}") 
+    
     plt.show()
     
 #%%
-def vis_valuedistr(XY, title):
+def vis_valuedistr(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     fig,ax = plt.subplots(1,2, figsize=(10,5), constrained_layout=True)
     
     for i in range(len(ax)):
@@ -104,7 +122,9 @@ def vis_valuedistr(XY, title):
         ax[i].tick_params(labelsize = 17)
     
     fig.suptitle(title, **font_data)
-    plt.savefig(f"Simulated_data/Figures/value_dist/{title}.svg") 
+    if not os.path.exists(f"{saveto}/value_dist/"):
+        os.makedirs(f"{saveto}/value_dist/")
+    plt.savefig(f"{saveto}/value_dist/{title}.{filextsn}") 
     # plt.show() 
     
 #%%
@@ -123,7 +143,7 @@ def autocorrelationcorr_BJ(x,acov=False):
         result[j] = numerator / denomenator
     return result
 # separately
-def vis_acf(XY, title = ''):
+def vis_acf(XY, title = '', saveto = "Simulated_data/Figures", filextsn = 'svg'):
     acf = [autocorrelationcorr_BJ(_) for _ in XY] 
     
     fig,ax = plt.subplots(1,2, figsize=(10,5), constrained_layout=True)
@@ -142,11 +162,13 @@ def vis_acf(XY, title = ''):
         ax[i].tick_params(labelsize = 17)
     
     fig.suptitle(title, **font_data)
-    plt.savefig(f"Simulated_data/Figures/autocorrelation/{title}.svg") 
+    if not os.path.exists(f"{saveto}/autocorrelation/"):
+        os.makedirs(f"{saveto}/autocorrelation/")
+    plt.savefig(f"{saveto}/autocorrelation/{title}.{filextsn}") 
     # plt.show() 
     
 #%% Power spectrum
-def vis_powerspectrum(XY, title):
+def vis_powerspectrum(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     acf = [autocorrelationcorr_BJ(_) for _ in XY] 
     
     Amp = [scipy.fft.fft(_) for _ in acf]
@@ -167,7 +189,9 @@ def vis_powerspectrum(XY, title):
         ax[i].tick_params(labelsize = 17)
     
     fig.suptitle(title, **font_data)
-    plt.savefig(f"Simulated_data/Figures/powerspectrum/{title}.svg") 
+    if not os.path.exists(f"{saveto}/powerspectrum/"):
+        os.makedirs(f"{saveto}/powerspectrum/")
+    plt.savefig(f"{saveto}/powerspectrum/{title}.{filextsn}") 
     # plt.show() 
 
 #%%
@@ -180,7 +204,7 @@ def recurrence_matrix(state, eps=0.10, steps=10):
     d[d>steps] = steps
     Z = squareform(d)
     return Z
-def vis_recurrence_plot(XY, title, eps=0.10, steps=10):
+def vis_recurrence_plot(XY, title, eps=0.10, steps=10, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     recmat = [recurrence_matrix(_, eps = eps, steps = steps) for _ in XY] 
     
     fig,ax = plt.subplots(1,2, figsize=(12,6), constrained_layout=True)
@@ -195,12 +219,15 @@ def vis_recurrence_plot(XY, title, eps=0.10, steps=10):
         cbar[i].ax.tick_params(labelsize=17)
         ax[i].set_xlabel("Time", **font)
         ax[i].set_ylabel('Time', **font)
-        ax[i].set_title(f'Recurrence plot of {xory}, eps={eps}, steps = {steps}', **font_data)
+        ax[i].set_title(f'Recurrence plot of {xory}', **font_data)
         ax[i].tick_params(labelsize = 17)
     
-    fig.suptitle(title, **font_data)
-    plt.savefig(f"Simulated_data/Figures/recurrence_plot/{title}_{eps}_{steps}.svg") 
+    fig.suptitle(f'{title}, eps={eps}, steps = {steps}', **font_data)
+    if not os.path.exists(f"{saveto}/recurrence_plot/"):
+        os.makedirs(f"{saveto}/recurrence_plot/")
+    plt.savefig(f"{saveto}/recurrence_plot/{title}_{eps}_{steps}.{filextsn}") 
     # plt.show() 
+    plt.close()
 
 # vis_recurrence_plot(data['xy_sinewn']['data'][0], 'xy_ar_u', eps=0.25, steps=10)
  #%% 
@@ -211,3 +238,36 @@ if __name__ == "__main__":
         # vis_acf(val['data'][0], key)
         # vis_powerspectrum(val['data'][0], key)
         # vis_recurrence_plot(val['data'][0], key, eps=0.01, steps=20)
+        
+#%% Viz normalised data
+    from mergedeep import merge
+    
+    samplelist = ['xy_Caroline_LV_asym_competitive',
+                  'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
+                  'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
+    
+    def extract_normalised_seq(sample):
+        if 'xy_' in sample:
+            sampdir = f'Simulated_data/{sample}'
+        elif '500' in sample:
+            sampdir = f'Simulated_data/LVextra/{sample}'
+            
+        results = []
+        for fi in os.listdir(sampdir):
+            if 'data' in fi or 'falsepos' in fi :
+                continue
+            elif 'normalise' in fi:
+                print(f'Loading:{sampdir}/{fi}')
+                with open(f'{sampdir}/{fi}', 'rb') as file:
+                    results.append(pickle.load(file))
+                    
+        
+        ret = merge(*[{key : num['XY']} for sublist in results for num in sublist['pvals'] for key in num.keys() if key != 'XY'])
+        return ret
+    seqs = {}
+    for sample in samplelist:
+        seqs[sample] = extract_normalised_seq(sample)
+        
+    # vis_data(seqs['xy_Caroline_LV_asym_competitive'][200], 'UComp1Slow_11_normalised', "Simulated_data\Figures\data")
+    # vis_data(seqs['EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'][0], 'ECompFast_20_normalised', "Simulated_data\Figures\data")
+    # vis_data(seqs['UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05'][0], 'UComp1Fast_11_normalised', "Simulated_data\Figures\data")

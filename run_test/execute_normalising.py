@@ -52,12 +52,25 @@ def load_results_params(fi):
     #           for _ in range(num_trials)]
     # return data_fp, data['datagen_params']
 
-def norm_transform(x):
+def norm_transform_rank(x): #norm_transform
     return stats.norm.ppf((stats.rankdata(x))/(x.size+1.0)) #, loc = 0, scale = 1
 
-def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
-    x = norm_transform(pair[0])
-    y = norm_transform(pair[1])
+def norm_transform_minmax(x):
+    return (x-x.mean())/(x.max()-x.min())
+
+def norm_transform_zscore(x):
+    return(x-x.mean())/x.std()
+
+def run_each_ts(pair, pair_id, stats_list, test_list, maxlag, whichnorm = 'normrank'):
+    if whichnorm == 'normrank':
+        fxn = norm_transform_rank
+    elif whichnorm == 'normminmax':
+        fxn = norm_transform_minmax 
+    elif whichnorm == 'normzscore':
+        fxn = norm_transform_zscore
+        
+    x = fxn(pair[0])
+    y = fxn(pair[1])
     return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag),
             'XY': np.array([x,y])}
 
@@ -65,6 +78,7 @@ if __name__=="__main__":
     stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
     test_list = [sys.argv[1]] # , 'twin','randphase'
     maxlag = 0
+    whichnorm = sys.argv[4]
     
     data_name = sys.argv[2]
     if 'xy_' in data_name:
@@ -77,13 +91,13 @@ if __name__=="__main__":
     print(f"Loading {data_name} data, {N_0} {time.time()}")
     data, datagen_param = load_results_params(fi)
     
-    print(f'Sequencing number {N_0} to {N_0}')
+    print(f'Sequencing number {N_0} to {N_0+100}')
     data = data[N_0:N_0+100]
     # ARGs = []
     resultsList = []
     start = time.time()
     for series in enumerate(data):
-        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag)
+        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag, whichnorm)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
         print(f'Series #{series[0]} run in {time.time()-start}')
@@ -97,10 +111,10 @@ if __name__=="__main__":
     
     
     if 'xy_' in data_name:
-        tests = '_'.join(test_list + [str(N_0), str(N_0+100)] + ['normalised','nolag'])
+        tests = '_'.join(test_list + [str(N_0), str(N_0+100)] + [whichnorm,'nolag'])
         fiS = f"Simulated_data/{data_name}/{tests}.pkl"
     elif '500' in data_name: 
-        tests = '_'.join(test_list  + ['normalised','nolag'])
+        tests = '_'.join(test_list  + [whichnorm,'nolag'])
         fiS = f'Simulated_data/LVextra/{data_name}/{tests}.pkl'
     print(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:

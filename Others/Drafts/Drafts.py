@@ -566,11 +566,10 @@ ani = animation.FuncAnimation(
 
 import aspose.words as aw
 
-def vis_data(ts, titl = ""):
+def viss(ts, titl = ""):
     fig, ax = plt.subplots(figsize = (5, 5))
     ax.set_title(titl)
-    for i in range(len(ts)):
-        ax.plot(ts[i])
+    ax.plot(ts)
     ax.legend(["X","Y"])
 
 for i in range(len(datalist)):

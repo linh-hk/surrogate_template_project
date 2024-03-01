@@ -6,7 +6,7 @@ Created on Mon May  1 19:50:19 2023
 """
 import os
 os.getcwd()
-# os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 import numpy as np
 import pandas as pd
@@ -18,6 +18,7 @@ import shelve
 
 import sys
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
+sys.path.append('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject//Simulation_test/Simulation_code/surrogate_dependence_test')
 from main import manystats_manysurr
 import time
 start = time.time()
@@ -93,7 +94,8 @@ def visualise(df, processed_status = "", title = ""):
 visualise(SCOR_DOT, processed_status="Initial", title = "Initial data - not detrended - not normalised")
 #%% Normalising to zero mean and unit standard deviation
 def norm_transform(x):
-    return stats.norm.ppf((stats.rankdata(x))/(x.size+1.0)) #, loc = 0, scale = 1
+    # return stats.norm.ppf((stats.rankdata(x))/(x.size+1.0)) #, loc = 0, scale = 1
+    return (x - x.mean())/x.std()
 """
 Normalised without detrending data
 """
