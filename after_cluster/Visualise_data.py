@@ -46,12 +46,12 @@ font_data = {'fontsize' : 22, 'fontweight' : 'bold', 'fontname' : 'arial','color
 # texts = annotate_heatmap(im, valfmt="{x:.0f}", threshold=0, **font_data)
 
 #%% Load data
-def load_data(sample):
+def load_data(sample, suffix = ''):
     if 'xy_' in sample:
         sampdir = f'Simulated_data/{sample}'
     elif '500' in sample:
         sampdir = f'Simulated_data/LVextra/{sample}'
-    with open(f'{sampdir}/data.pkl', 'rb') as fi:
+    with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
         data = pickle.load(fi)
     return data
 if __name__ == "__main__":

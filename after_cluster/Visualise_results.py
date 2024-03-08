@@ -156,17 +156,18 @@ def merge_data(results, test_list, stat_list):
     return maxlag, runtime, test_params, test_list, pvals
     
 class results:
-    def __init__(self, sample):
+    def __init__(self, sample, excl = ['falsepos'], incl = ['normalised']):
         if 'xy_' in sample:
-            sampdir = f'Simulated_data/{sample}'
+            sampdir = f'Simulated_data/{sample}/normalised'
         elif '500' in sample:
-            sampdir = f'Simulated_data/LVextra/{sample}'
+            sampdir = f'Simulated_data/LVextra/{sample}/normalised'
         
         results = []
+        excl.append('data')
         for fi in os.listdir(sampdir):
-            if 'data' in fi or 'falsepos' in fi :
+            if any(pat in fi for pat in excl):
                 continue
-            elif 'normalise' in fi:
+            elif any(pat in fi for pat in incl):
                 print(f'Loading:{sampdir}/{fi}')
                 with open(f'{sampdir}/{fi}', 'rb') as file:
                     results.append(pickle.load(file))
@@ -636,6 +637,9 @@ if __name__ == "__main__":
         # if 'EComp' in key:
             # heatmap3(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
 #%% Visualise normalised special cases:
+    """ 
+    For codes of results() before adding 'normalised' to path/to/fi
+    """
     samplelist = ['xy_Caroline_LV_asym_competitive', 
                   'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
                   'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
@@ -655,4 +659,26 @@ if __name__ == "__main__":
         # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
         heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list, 
                 savehere='C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/normalised',
+                filextsn='svg')
+#%%
+    samplelist = ['xy_Caroline_LV_asym_competitive', 
+                  'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
+                  'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
+    whichnorm = 'normzscore' # 'normminmax' 'normrank'
+    Res = {}
+    for sample in samplelist:
+        Res[sample] = results(sample, excl=['falsepos'], incl=[whichnorm])
+        print(sample)
+        
+    for key, val in Res.items():
+        val.into_df()
+        
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
+    # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
+    for key, val in Res.items():
+        # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
+        heatmap(val.df, f'{key} {whichnorm}', ('randphase', 'twin', 'tts'), stat_list, 
+                savehere=f'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/{whichnorm}',
                 filextsn='svg')

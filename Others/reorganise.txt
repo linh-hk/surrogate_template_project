@@ -1,0 +1,6 @@
+#!/bin/bash
+# Reorganise the files
+
+for fi in $(ls -d *500*); do echo ${fi}; if [ $(ls ${fi}/*nolag.pkl | wc -l) -ne 0 ] && ! [ -d ${fi}/nolag ]; then mkdir ${fi}/nolag ; mv ${fi}/*nolag.pkl ${fi}/nolag ; else echo 'idk' ; fi; done
+
+for fi in $(ls -d *500*); do echo ${fi}; if [ $(ls ${fi}/*nolag_falsepos.pkl | wc -l) -ne 0 ] && ! [ -d ${fi}/nolag_falsepos ]; then mkdir ${fi}/nolag_falsepos ; mv ${fi}/*nolag_falsepos.pkl ${fi}/nolag_falsepos ; else echo 'idk' ; fi; done

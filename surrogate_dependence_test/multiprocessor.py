@@ -35,7 +35,10 @@ class Multiprocessor:
 
     @staticmethod
     def _wrapper(func, queue, args):
-        ret = func(*args)
+        if type(args) == type({}):
+            ret = func(**args)
+        else:
+            ret = func(*args)
         queue.put(ret)
         info(func.__name__)
         

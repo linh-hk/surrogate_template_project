@@ -358,7 +358,7 @@ def lotkaVolterraSat(t,y,mu,M,K):
     lv = y * (mu + intx_mat @ y);
     return lv;
 
-def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, mode = '', fn = lotkaVolterra): # ,intx="competitive"
+def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra): # ,intx="competitive"
     print('Generating Caroline Lotka-Volterra model')
     dt=0.05; # integration step
     lag = int(150/dt);
