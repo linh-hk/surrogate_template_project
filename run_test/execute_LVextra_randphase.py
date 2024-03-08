@@ -37,9 +37,9 @@ import pickle # load and save data
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
 #%%
-def load_results_params(data_name):
+def load_results_params(data_name, suffix = ''):
     # names = 'caroline_LvCh_FitzHugh_100'
-    fi = f"Simulated_data/LVextra/{data_name}/data.pkl"
+    fi = f"Simulated_data/LVextra/{data_name}/data{suffix}.pkl"
     with open(fi, 'rb') as file:
         data = pickle.load(file)
     return data['data'], data['datagen_params']
@@ -55,15 +55,15 @@ if __name__=="__main__":
     maxlag = 0
     
     # print(f"Loading {sys.argv[1]} data, {int(sys.argv[2])} {time.time()}")
-    data, datagen_param = load_results_params(f'{sys.argv[1]}')
+    data, datagen_param = load_results_params(f'{sys.argv[1]}', '900')
     
     # print(f'Sequencing number {sys.argv[2]} to {int(sys.argv[2])+100}')
-    # data = data[int(sys.argv[2]):int(sys.argv[2])+100]
+    data = data[int(sys.argv[2]):int(sys.argv[2])+100]
     # ARGs = []
     resultsList = []
     start = time.time()
     for series in enumerate(data):
-        ARGs = (series[1], series[0],stats_list, test_list, maxlag)
+        ARGs = (series[1], int(sys.argv[2])+series[0],stats_list, test_list, maxlag)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
         print(f'Series #{series[0]} run in {time.time()-start}')
@@ -75,7 +75,7 @@ if __name__=="__main__":
              'stats_list' : stats_list,
              'test_list' : test_list}
     
-    tests = '_'.join(test_list+['nolag'])
+    tests = '_'.join(test_list+['nolag', sys.argv[2]])
     with open(f'Simulated_data/LVextra/{sys.argv[1]}/{tests}.pkl', 'wb') as fi:
         pickle.dump(saveP, fi);
             

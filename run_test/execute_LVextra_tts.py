@@ -20,7 +20,6 @@ This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' 
 """
 import os
 print(f'working directory: {os.getcwd()}')
-
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test')
 # os.getcwd()
 
@@ -38,9 +37,9 @@ import pickle # load and save data
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
 #%%
-def load_results_params(data_name):
+def load_results_params(data_name, suffix = ''):
     # names = 'caroline_LvCh_FitzHugh_100'
-    fi = f"Simulated_data/LVextra/{data_name}/data.pkl"
+    fi = f"Simulated_data/LVextra/{data_name}/data{suffix}.pkl"
     with open(fi, 'rb') as file:
         data = pickle.load(file)
     return data['data'], data['datagen_params']
