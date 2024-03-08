@@ -95,7 +95,7 @@ if __name__ == '__main__':
     
     
     start = time.time()
-    reps = 20
+    reps = 900
     for ARGS in ARGs:
         mp = Multiprocessor()
         # Extract needed items in ARGS
