@@ -77,7 +77,8 @@ if __name__=="__main__":
     
     saveP = {'pvals' : resultsList,
              'stats_list' : stats_list,
-             'test_list' : test_list}
+             'test_list' : test_list,
+             'nsurr' : 199}
     
     tests = '_'.join(test_list+['nolag','falsepos', sys.argv[2]])
     with open(f'Simulated_data/LVextra/{sys.argv[1]}/{tests}.pkl', 'wb') as fi:
