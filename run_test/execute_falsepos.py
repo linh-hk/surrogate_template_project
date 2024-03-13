@@ -73,7 +73,7 @@ if __name__=="__main__":
     data_name = sys.argv[2]
     N_0 = int(sys.argv[3])
     print(f"Loading {data_name} data, {N_0} {time.time()}")
-    data, datagen_param = load_data(data_name)
+    data, datagen_param = load_data(data_name, '900')
     
     print(f'Sequencing number {N_0} to {N_0+100}')
     data = data[N_0:N_0+100]
@@ -94,7 +94,7 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 199}
     
-    tests = '_'.join(test_list+['nolag','falsepos'])# , str(N_0)
+    tests = '_'.join(test_list+['nolag','falsepos', str(N_0)])# 
     if 'xy_' in data_name:
         fiS = f"Simulated_data/{data_name}/{tests}.pkl"
     elif '500' in data_name: 
