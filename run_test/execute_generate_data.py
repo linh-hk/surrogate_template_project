@@ -54,7 +54,7 @@ if __name__ == '__main__':
     
     ARGs= []
     # EComp
-    ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
+    # ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     # ARGs.append({'mode': 'EComp', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     # ARGs = {'mode': 'EComp', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05}
@@ -105,12 +105,13 @@ if __name__ == '__main__':
             
         mp.run(6) # can only work up to 6. 7 and 8 will freeze the laptop
         data = mp.results()
-        print(data)
+        # print(data)
         
         runtime = time.time() - start
-        filename = filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
+        filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
         savethis = {'data': data, 'datagen_params': ARGS, 'runtime': runtime}
         save_data(filename, savethis, num_trials=reps)
+        del ARGS_, data, savethis
 
     # sys.stdout.flush();
     # sys.stdout.write('Total time: %5.2f seconds\n' % (time.time() - start));

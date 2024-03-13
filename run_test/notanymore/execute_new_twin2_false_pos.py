@@ -5,9 +5,6 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {surr_proc}     {data_name}     {N_0}
-qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]
-
 This script is submited to SGE on UCL cluster as a task. 
 What it does is:
     Load simulated data that is in ../Simulated_data
@@ -27,9 +24,8 @@ print(f'working directory: {os.getcwd()}')
 # os.getcwd()
 
 # import GenerateData as dataGen
-import numpy as np
+# import numpy as np
 # import Correlation_Surrogate_tests as cst
-from scipy import stats
 
 import sys # to save name passed from cmd
 import time
@@ -41,47 +37,37 @@ import pickle # load and save data
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
 #%%
-def load_data(data_name, suffix = ''):
-    if 'xy_' in data_name:
-        sampdir = f'Simulated_data/{data_name}'
-    elif '500' in data_name:
-        sampdir = f'Simulated_data/LVextra/{data_name}'
-    with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
-        data = pickle.load(fi)
+def load_results_params(data_name):
+    # names = 'caroline_LvCh_FitzHugh_100'
+    fi = f"Simulated_data/{data_name}/data.pkl"
+    with open(fi, 'rb') as file:
+        data = pickle.load(file)
     # for false pos
-    num_trials = len(data['data'])
+    num_trials = data['datagen_params']['N']
     data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
               for _ in range(num_trials)]
     return data_fp, data['datagen_params']
-    # for false pos
-    # num_trials = data['datagen_params']['N']
-    # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
-    #           for _ in range(num_trials)]
-    # return data_fp, data['datagen_params']
 
 def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     x = pair[0]
     y = pair[1]
-    return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag),
-            'XY': np.array([x,y])}
+    return {pair_id, sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag)}
 
 if __name__=="__main__":
     stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
-    test_list = [sys.argv[1]] # , 'twin','randphase'
+    test_list = ['twin'] # , 'twin','randphase'
     maxlag = 0
     
-    data_name = sys.argv[2]
-    N_0 = int(sys.argv[3])
-    print(f"Loading {data_name} data, {N_0} {time.time()}")
-    data, datagen_param = load_data(data_name)
+    print(f"Loading {sys.argv[1]} data, {int(sys.argv[2])} {time.time()}")
+    data, datagen_param = load_results_params(f'{sys.argv[1]}')
     
-    print(f'Sequencing number {N_0} to {N_0+100}')
-    data = data[N_0:N_0+100]
+    print(f'Sequencing number {sys.argv[2]} to {int(sys.argv[2])+100}')
+    data = data[int(sys.argv[2]):int(sys.argv[2])+100]
     # ARGs = []
     resultsList = []
     start = time.time()
     for series in enumerate(data):
-        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag)
+        ARGs = (series[1], int(sys.argv[2])+series[0],stats_list, test_list, maxlag)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
         print(f'Series #{series[0]} run in {time.time()-start}')
@@ -91,17 +77,11 @@ if __name__=="__main__":
     
     saveP = {'pvals' : resultsList,
              'stats_list' : stats_list,
-             'test_list' : test_list,
-             'nsurr' : 199}
+             'test_list' : test_list}
     
-    tests = '_'.join(test_list+['nolag','falsepos'])# , str(N_0)
-    if 'xy_' in data_name:
-        fiS = f"Simulated_data/{data_name}/{tests}.pkl"
-    elif '500' in data_name: 
-        fiS = f'Simulated_data/LVextra/{data_name}/{tests}.pkl'
-    print(f'Saving at {fiS}')
-    with open(fiS, 'wb') as file:
-        pickle.dump(saveP, file);
+    tests = '_'.join(test_list +[str(sys.argv[2]), str(int(sys.argv[2])+100)] + ['nolag','falsepos'])
+    with open(f'Simulated_data/{sys.argv[1]}/{tests}.pkl', 'wb') as fi:
+        pickle.dump(saveP, fi);
             
             #np.savetxt(fname,resultsList);
     sys.stdout.flush();

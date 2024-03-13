@@ -29,7 +29,7 @@ print(f'working directory: {os.getcwd()}')
 # import GenerateData as dataGen
 import numpy as np
 # import Correlation_Surrogate_tests as cst
-from scipy import stats
+# from scipy import stats
 
 import sys # to save name passed from cmd
 import time
@@ -49,10 +49,10 @@ def load_data(data_name, suffix = ''):
     with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
         data = pickle.load(fi)
     # for false pos
-    num_trials = len(data['data'])
-    data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
-              for _ in range(num_trials)]
-    return data_fp, data['datagen_params']
+    # num_trials = len(data['data'])
+    # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
+    #           for _ in range(num_trials)]
+    return data, data['datagen_params']
     # for false pos
     # num_trials = data['datagen_params']['N']
     # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
@@ -94,7 +94,7 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 199}
     
-    tests = '_'.join(test_list+['nolag','falsepos'])# , str(N_0)
+    tests = '_'.join(test_list+['nolag']) #, str(N_0)
     if 'xy_' in data_name:
         fiS = f"Simulated_data/{data_name}/{tests}.pkl"
     elif '500' in data_name: 
