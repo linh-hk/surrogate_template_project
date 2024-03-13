@@ -85,7 +85,7 @@ IAAFT:
     (power spectrum) of surrY so we iteratively adjust the amplitudes of 
     scaled data.
 """
-def get_iaaft_surrogates(timeseries, n_surr=199, n_iter=200):
+def get_iaaft_surrogates(timeseries, n_surr=99, n_iter=200):
     print("\t\t\t\trandom phase iaaft")
     # prebuilt algorithm in pyunicorn so dont have to create empty matrix
     results = []
@@ -244,7 +244,7 @@ def choose_twin_threshold(timeseries, embed_dim, tau, neighbor_frequency=0.12, d
 
 
 #twin method
-def get_twin_surrogates(timeseries, embed_dim, tau, num_surr=199,
+def get_twin_surrogates(timeseries, embed_dim, tau, num_surr=99,
                         neighbor_frequency=0.1, th=None):
     if th is None:
         th = choose_twin_threshold(timeseries, embed_dim, tau, neighbor_frequency)
@@ -256,7 +256,7 @@ def get_twin_surrogates(timeseries, embed_dim, tau, num_surr=199,
         results.append(surr)
     return np.array(results).T
 
-def get_twin_wrapper(timeseries,num_surr=199):
+def get_twin_wrapper(timeseries,num_surr=99):
     print("\t\t\t\ttwin")
     embed_dim, tau = choose_embed_params(timeseries);
     surrs = get_twin_surrogates(timeseries,embed_dim,tau,num_surr);

@@ -92,7 +92,7 @@ if __name__=="__main__":
     saveP = {'pvals' : resultsList,
              'stats_list' : stats_list,
              'test_list' : test_list,
-             'nsurr' : 199}
+             'nsurr' : 99}
     
     tests = '_'.join(test_list+['nolag', str(N_0)]) #
     if 'xy_' in data_name:
