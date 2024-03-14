@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "900nolag99"
+#$ -N "nolag99"
 
 #$ -cwd
 

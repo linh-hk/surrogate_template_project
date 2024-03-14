@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "900fp_nolag99"
+#$ -N "fp_nolag99"
 
 #$ -cwd
 
