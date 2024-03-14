@@ -5,8 +5,8 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {surr_proc}     {data_name}     {N_0}
-qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]
+qsub    ...             {surr_proc}     {data_name}     {N_0}           {which_data}
+qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]
 
 This script is submited to SGE on UCL cluster as a task. 
 What it does is:
@@ -52,7 +52,7 @@ def load_data(data_name, suffix = ''):
     # num_trials = len(data['data'])
     # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
     #           for _ in range(num_trials)]
-    return data, data['datagen_params']
+    return data['data'], data['datagen_params']
     # for false pos
     # num_trials = data['datagen_params']['N']
     # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
@@ -72,8 +72,9 @@ if __name__=="__main__":
     
     data_name = sys.argv[2]
     N_0 = int(sys.argv[3])
+    which_data = sys.argv[4]
     print(f"Loading {data_name} data, {N_0} {time.time()}")
-    data, datagen_param = load_data(data_name, '900')
+    data, datagen_param = load_data(data_name, which_data)
     
     print(f'Sequencing number {N_0} to {N_0+100}')
     data = data[N_0:N_0+100]
@@ -94,7 +95,10 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 99}
     
-    tests = '_'.join(test_list+['nolag', str(N_0)]) #
+    if which_data == '':
+        tests = '_'.join(test_list+['nolag']) #, str(N_0)
+    else:
+        tests = '_'.join(test_list+['nolag', str(N_0)]) #
     if 'xy_' in data_name:
         fiS = f"Simulated_data/{data_name}/{tests}.pkl"
     elif '500' in data_name: 

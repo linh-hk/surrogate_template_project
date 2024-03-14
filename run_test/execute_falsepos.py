@@ -5,8 +5,8 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {surr_proc}     {data_name}     {N_0}
-qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]
+qsub    ...             {surr_proc}     {data_name}     {N_0}           {which_data}
+qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]
 
 This script is submited to SGE on UCL cluster as a task. 
 What it does is:
@@ -29,7 +29,7 @@ print(f'working directory: {os.getcwd()}')
 # import GenerateData as dataGen
 import numpy as np
 # import Correlation_Surrogate_tests as cst
-from scipy import stats
+# from scipy import stats
 
 import sys # to save name passed from cmd
 import time
@@ -72,8 +72,9 @@ if __name__=="__main__":
     
     data_name = sys.argv[2]
     N_0 = int(sys.argv[3])
+    which_data = sys.argv[4]
     print(f"Loading {data_name} data, {N_0} {time.time()}")
-    data, datagen_param = load_data(data_name, '900')
+    data, datagen_param = load_data(data_name, which_data)
     
     print(f'Sequencing number {N_0} to {N_0+100}')
     data = data[N_0:N_0+100]
@@ -94,7 +95,10 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 99}
     
-    tests = '_'.join(test_list+['nolag','falsepos', str(N_0)])# 
+    if which_data == '':
+        tests = '_'.join(test_list+['nolag','falsepos'])# , str(N_0)
+    else:
+        tests = '_'.join(test_list+['nolag','falsepos', str(N_0)])# 
     if 'xy_' in data_name:
         fiS = f"Simulated_data/{data_name}/{tests}.pkl"
     elif '500' in data_name: 

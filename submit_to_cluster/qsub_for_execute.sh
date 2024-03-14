@@ -8,12 +8,12 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "nolag99"
+#$ -N "900nolag99"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute.py $1 $2 $3
+python3 -u Simulation_code/run_test/execute.py $1 $2 $3 $4
 
