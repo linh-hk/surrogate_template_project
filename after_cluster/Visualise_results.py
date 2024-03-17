@@ -12,7 +12,7 @@ os.getcwd()
 os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 os.getcwd()
-import glob
+# import glob
 import numpy as np
 import pandas as pd 
 import scipy as sp
@@ -121,6 +121,7 @@ def rename(sample):
 def merge_data(results, test_list, stat_list):
     maxlag = set([sublist['pvals'][0][list(sublist['pvals'][0])  [0]]['test_params']['surrY'][sublist['test_list'][0]]['maxlag']
                   for sublist in results])
+    n_surr = set([sublist['nsurr'] for sublist in results])
     pvalss = {}
     for ml in maxlag:
         intermed = [_ for sublist in results for _ in sublist['pvals'] if 
@@ -153,24 +154,32 @@ def merge_data(results, test_list, stat_list):
                  for lagkey, lagitm in pvals.items()}
     test_list = (*test_list, 'tts')
     pvals = merge(pvals, tts_pvals)
-    return maxlag, runtime, test_params, test_list, pvals
+    return maxlag, runtime, test_params, test_list, pvals, n_surr
     
 class results:
-    def __init__(self, sample, excl = ['falsepos'], incl = ['normalised']):
+    def __init__(self, sample, whichrun = 'nolag_surr99'): # excl = ['falsepos'], incl = ['normalised']
         if 'xy_' in sample:
-            sampdir = f'Simulated_data/{sample}/normalised'
+            sampdir = f'Simulated_data/{sample}/{whichrun}'
         elif '500' in sample:
-            sampdir = f'Simulated_data/LVextra/{sample}/normalised'
+            sampdir = f'Simulated_data/LVextra/{sample}/{whichrun}'
         
         results = []
-        excl.append('data')
+        # excl.append('data')
         for fi in os.listdir(sampdir):
-            if any(pat in fi for pat in excl):
-                continue
-            elif any(pat in fi for pat in incl):
-                print(f'Loading:{sampdir}/{fi}')
+            # if any(pat in fi for pat in excl):
+            #     continue
+            # elif any(pat in fi for pat in incl):
+            #     print(f'Loading:{sampdir}/{fi}')
                 with open(f'{sampdir}/{fi}', 'rb') as file:
                     results.append(pickle.load(file))
+                    
+        for i in results:
+            if 'nsurr' not in i.keys():
+                # results.append({'pvals': [{_key+900 : _val} for _ in i['pvals'] for _key, _val in _.items()],
+                #                 'stats_list': i['stats_list'],
+                #                 'test_list': i['test_list'],
+                #                 'nsurr': 99})
+                results.remove(i)
         '''falsepos = []
         for fi in os.listdir(sampdir):
             if 'falsepos' in fi:                
@@ -217,7 +226,7 @@ class results:
         # test_list = (*test_list, 'tts')
         # pvals = merge(pvals, tts_pvals)
         
-        maxlag, runtime0, test_params, test_list0, pvals = merge_data(results, test_list, stat_list)
+        maxlag, runtime0, test_params, test_list0, pvals, n_surr = merge_data(results, test_list, stat_list)
         ''' fp_maxlag, fp_runtime, fp_test_params, fp_test_list, fp_pvals = merge_data(falsepos, test_list, stat_list)'''
         
         # self.results = {'stat_list': stat_list, 'test_list': test_list, 'test_params': test_params, 'runtime': runtime, 'pvals': pvals}
@@ -227,6 +236,7 @@ class results:
         self.runtime = runtime0
         self.maxlag = list(maxlag)
         self.pvals = pvals
+        self.n_surr = n_surr
         '''self.fp_maxlag = fp_maxlag
         self.fp_test_list = fp_test_list
         self.fp_runtime = fp_runtime
@@ -401,11 +411,20 @@ def add_hash_ckchi2(df, axs):
     # return axs
 
 # https://matplotlib.org/stable/tutorials/colors/colorbar_only.html
-def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = False, savehere = '', filextsn = 'svg'):
+def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = False, savehere = '', filextsn = 'svg', rescale = True):
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     maxlag = set(df.index.get_level_values(0))
     col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
     print(title)
+    
+    # Scaling
+    scale = max(df.max())
+    bounds = [0,10.001,20.001, 30.001, 40.001, 50.001, 60.001, 70.001, 80.001, 90.001, 100.001] 
+    if scale > 100:
+        if rescale: 
+            df = df/scale * 100
+        else:
+            bounds = np.arange(0,scale+0.001, scale/10) + 0.001
     
     for ml in maxlag: 
         row = [(ml, _) for _ in stat_list]
@@ -422,7 +441,7 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
         # bounds = [0, 100]
         # norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
         cmap = mpl.cm.cool #viridis 
-        bounds = [0,10.001,20.001, 30.001, 40.001, 50.001, 60.001, 70.001, 80.001, 90.001, 100.001] 
+        # bounds = [0,10.001,20.001, 30.001, 40.001, 50.001, 60.001, 70.001, 80.001, 90.001, 100.001] 
         norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
         for i, cst in enumerate(test_list):
             axs = fig.add_subplot(grid[i])
@@ -458,10 +477,10 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
             axs.tick_params(which =  "minor", bottom = False, left = False)
             
         
-        if falsepos:
-            fig.suptitle(f'{title}_fp, maxlag {ml}', **font) 
-        else:
-            fig.suptitle(f'{title}, maxlag {ml}', **font) 
+        # if falsepos:
+        #     fig.suptitle(f'{title}_fp, maxlag {ml}', **font) 
+        # else:
+        fig.suptitle(f'{title}, maxlag {ml}', **font) 
         # fig.subplots_adjust(right=0.8) 
         cbar_ax = fig.add_subplot(grid[-1]) 
         cbar = fig.colorbar(im,
@@ -472,7 +491,10 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
                             )
         # cbar = fig.colorbar(im, cax=cbar_ax, ticks = [0.05, 0.25,0.50,0.75,1])
         cbar.ax.tick_params(labelsize = 16)
-        cbar.ax.set_ylabel('true positive counts',**font)
+        if falsepos:
+            cbar.ax.set_ylabel('false positive counts',**font)
+        else:
+            cbar.ax.set_ylabel('true positive counts',**font)
         
         
         if savehere == '':
@@ -483,6 +505,9 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
                 savehere = "Simulated_data/Figures/falsepos"
             else:
                 savehere = "Simulated_data/Figures/heatmap_results"
+        else:
+            if not os.path.isdir(savehere):
+                os.mkdir(savehere)
         plt.savefig(f"{savehere}/{title}_ml{ml}.{filextsn}") 
         plt.show()
         
@@ -682,3 +707,42 @@ if __name__ == "__main__":
         heatmap(val.df, f'{key} {whichnorm}', ('randphase', 'twin', 'tts'), stat_list, 
                 savehere=f'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/{whichnorm}',
                 filextsn='svg')
+        
+#%% 
+    sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
+    whichrun = 'nolag_surr99'
+    Res = results(sample, whichrun)
+    Res.into_df()
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 1000', test_list, stat_list,
+    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+    #         filextsn='svg',
+    #         rescale= False)
+    # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 100', test_list, stat_list,
+    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+    #         filextsn='svg')
+    
+    #%% Draw histogram
+    drawhist = np.array(Res.pvals['maxlag0']['surrY']['randphase']['ccm_y->x'])
+    hist_bins = np.linspace(drawhist.min(),drawhist.max(), 100)
+    fig,ax = plt.subplots()
+    ax.hist(drawhist, bins = hist_bins)
+    fig.suptitle(t = 'randphase ccm_y->x')
+    
+#%%
+    sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
+    whichrun = 'nolag_fp_surr99'
+    Resfp = results(sample, whichrun)
+    Resfp.into_df()
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            rescale= False)
+    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg')
