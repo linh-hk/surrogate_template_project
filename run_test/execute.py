@@ -48,10 +48,6 @@ def load_data(data_name, suffix = ''):
         sampdir = f'Simulated_data/LVextra/{data_name}'
     with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
         data = pickle.load(fi)
-    # for false pos
-    # num_trials = len(data['data'])
-    # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
-    #           for _ in range(num_trials)]
     return data['data'], data['datagen_params']
     # for false pos
     # num_trials = data['datagen_params']['N']
