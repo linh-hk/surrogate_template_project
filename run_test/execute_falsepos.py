@@ -69,7 +69,7 @@ if __name__=="__main__":
     data_name = sys.argv[2]
     N_0 = int(sys.argv[3])
     which_data = sys.argv[4]
-    print(f"Loading {data_name} data, {N_0} {time.time()}")
+    print(f"Running {data_name} sample, data{which_data}.pkl {N_0} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}")
     data, datagen_param = load_data(data_name, which_data)
     
     print(f'Sequencing number {N_0} to {N_0+100}')
