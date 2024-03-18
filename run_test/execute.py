@@ -50,7 +50,7 @@ def load_data(data_name, suffix = ''):
         data = pickle.load(fi)
     return data['data'], data['datagen_params']
     # for false pos
-    # num_trials = data['datagen_params']['N']
+    # num_trials = len(data['data'])
     # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
     #           for _ in range(num_trials)]
     # return data_fp, data['datagen_params']
