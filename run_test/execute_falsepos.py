@@ -5,7 +5,7 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {cor_stat}      {surr_proc}     {data_name}     {which_data}    {N_0}           
+qsub    ...             {cor_stat}      {surr_proc}     {data_name}     {input_}    {N_0}           
 qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]
 
 for cor_stat, the arguments is an array of the test's initials:
@@ -68,12 +68,12 @@ def sparse_corstat(sys_arg):
             stats_list.extend(['granger_y->x', 'granger_x->y'])
         return stats_list
         
-def load_data(data_name, suffix = ''):
+def load_data(data_name, input_ = 'data'):
     if 'xy_' in data_name:
         sampdir = f'Simulated_data/{data_name}'
     elif '500' in data_name:
         sampdir = f'Simulated_data/LVextra/{data_name}'
-    with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
+    with open(f'{sampdir}/{input_}.pkl', 'rb') as fi:
         data = pickle.load(fi)
     # return data['data'], data['datagen_params']
     # for false pos
@@ -100,14 +100,14 @@ if __name__=="__main__":
     maxlag = 0
     
     data_name = sys.argv[3]
-    which_data = sys.argv[4]
+    input_ = sys.argv[4]
     N_0 = int(sys.argv[5])
     N = 100
-    print(f"Running {data_name} sample, data{which_data}.pkl {N_0} to {N_0 + N} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}, falsepos")
-    data, datagen_param = load_data(data_name, which_data)
+    print(f"Running {data_name} sample, {input_}.pkl {N_0} to {N_0 + N} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}, falsepos")
+    data, datagen_param = load_data(data_name, input_)
     
     print(f'Sequencing number {N_0} to {N_0 + N}')
-    data = data[N_0:N_0 + N]
+    data = data[N_0 : N_0 + N]
     # ARGs = []
     resultsList = []
     start = time.time()
@@ -125,7 +125,7 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 99}
     
-    out_name = name_output(data_name,which_data, sys.argv[1], test_list, N_0)
+    out_name = name_output(data_name, input_, sys.argv[1], test_list, N_0)
     
     fiS = f"Simulated_data/{data_name}/{out_name}.pkl" if 'xy_' in data_name else f'Simulated_data/LVextra/{data_name}/{out_name}.pkl'
     print(f'Saving at {fiS}')
