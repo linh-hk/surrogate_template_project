@@ -54,16 +54,16 @@ def load_data(sample, suffix = ''):
     with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
         data = pickle.load(fi)
     return data
-if __name__ == "__main__":
-    data = {}
-    for sample in os.listdir('Simulated_data'):
-        if 'xy_' in sample:
-            data[sample] = load_data(sample)
-            print(sample)
-    for sample in os.listdir('Simulated_data/LVextra'):
-        if '500' in sample:
-            data[sample] = load_data(sample)
-            print(sample)
+# if __name__ == "__main__":
+    # data = {}
+    # for sample in os.listdir('Simulated_data'):
+    #     if 'xy_' in sample:
+    #         data[sample] = load_data(sample)
+    #         print(sample)
+    # for sample in os.listdir('Simulated_data/LVextra'):
+    #     if '500' in sample:
+    #         data[sample] = load_data(sample)
+    #         print(sample)
 #%% 
 def viss(ts, titl = ""):
     fig, ax = plt.subplots(figsize = (5, 5))
@@ -77,17 +77,17 @@ def viss(ts, titl = ""):
     ax.scatter(range(len(ts)), ts, color = "blue", s = 5)
     
 def vis_data(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
-    X = XY[0][0:100]
-    Y = XY[1][0:100]
+    X = XY[0]
+    Y = XY[1]
     tmp = np.arange(len(X))
     
     
     
-    fig, ax = plt.subplots(figsize=(5.25, 4.125))
+    fig, ax = plt.subplots(figsize=(6.5, 5.3))
     fig.set_tight_layout(True)
     
-    ax.plot(X, color = "blue")
-    ax.plot(Y, color = "#ff6600")
+    ax.plot(X, color = 'red') # "blue"
+    ax.plot(Y, color = 'blue') # "#ff6600"
     ax.legend(["X","Y"], fontsize = 20)
     # minv = -3 # XY.min() # -0.25 
     # maxv = 3 # XY.max() # 2.25 
@@ -95,14 +95,17 @@ def vis_data(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     ax.set_xlabel('Time index', **font)
     ax.set_ylabel('X and Y value', **font)
     ax.set_title(f'{title}', **font_data)
-    ax.scatter(tmp, X, color = "blue", s = 5)
-    ax.scatter(tmp, Y, color = "#ff6600", s = 5)
+    ax.scatter(tmp, X, color = 'red', s = 10) # "blue"
+    ax.scatter(tmp, Y, color = 'blue', s = 10) # "#ff6600"
 
     ax.tick_params(labelsize = 17)
+    # ax.set_xticklabels(col_labels,**font)
+    # ax.set_yticklabels(row_labels,**font)
     
     # if not os.path.exists(f"{saveto}/data/"):
     #     os.makedirs(f"{saveto}/data/")
     # plt.savefig(f"{saveto}/data/{title}.{filextsn}") 
+    plt.savefig(f"{saveto}/data/{title}.{filextsn}")
     
     plt.show()
     
@@ -271,3 +274,8 @@ if __name__ == "__main__":
     # vis_data(seqs['xy_Caroline_LV_asym_competitive'][200], 'UComp1Slow_11_normalised', "Simulated_data\Figures\data")
     # vis_data(seqs['EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'][0], 'ECompFast_20_normalised', "Simulated_data\Figures\data")
     # vis_data(seqs['UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05'][0], 'UComp1Fast_11_normalised', "Simulated_data\Figures\data")
+#%%
+    sample = 'EMut_1.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05'
+    data = load_data(sample)
+    for i in range(len(data['data'])):
+        vis_data(data['data'][i], f'EMutSlow_20 series {i}')

@@ -1628,7 +1628,7 @@ sum(np.subtract(np.sort(pvals_full['surrY']['ccm_y->x']['tts_119']), np.sort(pva
 #%% binomial cutoff
 from scipy.stats import binom
 # reps is number of trials  
-reps  = 10000
+reps  = 1000
 false_cutoff = binom.ppf(0.95,reps,0.05);
 
 #%%

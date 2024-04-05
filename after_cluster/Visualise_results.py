@@ -38,7 +38,7 @@ mpl.rcParams['ytick.major.width'] = 1.5
 mpl.rcParams['ytick.major.size'] = 5
 
 mpl.rcParams['hatch.color'] = 'white'
-mpl.rcParams['hatch.linewidth'] = 2
+mpl.rcParams['hatch.linewidth'] = 3
 
 font = {'fontsize' : 16, 'fontweight' : 'bold', 'fontname' : 'arial'}
 # font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color':'white'}
@@ -157,7 +157,7 @@ def merge_data(results, test_list, stat_list):
     return maxlag, runtime, test_params, test_list, pvals, n_surr
     
 class results:
-    def __init__(self, sample, whichrun = 'nolag_surr99'): # excl = ['falsepos'], incl = ['normalised']
+    def __init__(self, sample, whichrun = 'nolag_surr99', excl = [], incl = ['_']): # excl = ['falsepos'], incl = ['normalised']
         if 'xy_' in sample:
             sampdir = f'Simulated_data/{sample}/{whichrun}'
         elif '500' in sample:
@@ -166,20 +166,24 @@ class results:
         results = []
         # excl.append('data')
         for fi in os.listdir(sampdir):
-            # if any(pat in fi for pat in excl):
-            #     continue
-            # elif any(pat in fi for pat in incl):
-            #     print(f'Loading:{sampdir}/{fi}')
+            if any(pat in fi for pat in excl):
+                continue
+            elif any(pat in fi for pat in incl):
+                print(f'Loading:{sampdir}/{fi}')
+            # else:
                 with open(f'{sampdir}/{fi}', 'rb') as file:
                     results.append(pickle.load(file))
                     
         for i in results:
             if 'nsurr' not in i.keys():
-                # results.append({'pvals': [{_key+900 : _val} for _ in i['pvals'] for _key, _val in _.items()],
-                #                 'stats_list': i['stats_list'],
-                #                 'test_list': i['test_list'],
-                #                 'nsurr': 99})
-                results.remove(i)
+                results.append({'pvals': [{_key : _val} for _ in i['pvals'] for _key, _val in _.items()],#_key+900
+                                'stats_list': i['stats_list'],
+                                'test_list': i['test_list'],
+                                'nsurr': 199})
+                # results.remove(i)
+        results = [_ for _ in results if 'nsurr' in _.keys()] 
+        # results = resultss
+        # del resultss
         '''falsepos = []
         for fi in os.listdir(sampdir):
             if 'falsepos' in fi:                
@@ -242,7 +246,7 @@ class results:
         self.fp_runtime = fp_runtime
         self.fp_test_params = fp_test_params
         self.fp_pvals = fp_pvals'''
-        self.n_trial = list(set([len(sublist['pvals']) for sublist in results]))
+        self.n_trial = len(pvals['maxlag0']['surrY']['randphase']['pearson'])
         
     def into_df(self, model_name = '', falsepos = False): # faster than into_df2 - runtime= 0.21683335304260254
         if falsepos:
@@ -367,6 +371,8 @@ if __name__ == "__main__":
     #     testing(val)
 
 #%% Draw heatmaps
+from scipy.stats import binom # for binom cut-off
+
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
                      textcolors=("black", "white"),
                      threshold=None, **textkw): 
@@ -402,34 +408,37 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
 
     return texts
 
-def add_hash_ckchi2(df, axs):
+def add_hatch_ckchi2(df, axs):
     # Chi2 squared test add hatch
     ckchi2_cordinates = np.where(df <= 0.05)[0]
     for j in ckchi2_cordinates:
         # print(j)
         axs.add_patch(patches.Rectangle((-0.49,j-0.49),2,1, hatch = '--', edgecolor = 'white', fill = False))
     # return axs
+         
 
 # https://matplotlib.org/stable/tutorials/colors/colorbar_only.html
-def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = False, savehere = '', filextsn = 'svg', rescale = True):
+# SurrY and surrX side-by-side for each test randphase{surrX, surrY}, twin{surrX, surrY}, tts{surrX, surrY}
+def heatmap(pvaldf, title, test_list, stat_list, 
+            ckchi2 = False, falsepos = False, 
+            savehere = '', filextsn = 'svg', 
+            scale = 100, rescale = False):
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     maxlag = set(df.index.get_level_values(0))
     col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
     print(title)
     
     # Scaling
-    scale = max(df.max())
-    bounds = [0,10.001,20.001, 30.001, 40.001, 50.001, 60.001, 70.001, 80.001, 90.001, 100.001] 
-    if scale > 100:
-        if rescale: 
-            df = df/scale * 100
-        else:
-            bounds = np.arange(0,scale+0.001, scale/10) + 0.001
+    if rescale:
+        df = df/scale * 100
+        scale = 100
+    bounds = np.arange(0,scale+0.001, scale/10) + 0.001
     
     for ml in maxlag: 
         row = [(ml, _) for _ in stat_list]
         draw = df.loc[row,col]
         print(draw, "oh yea\n")
+        print(bounds)
     
         fig = plt.figure(figsize = (7,5.5), constrained_layout = True) # figsize = (,), constrained_layout = True
         grid = fig.add_gridspec(nrows = 1, 
@@ -463,7 +472,7 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
                     colckchi2 = [(cst, 'CohenKappa') for _ in test_list for xory in ["SurrY", "SurrX"]]
                 if ckchi2 == 'chi2':
                     colckchi2 = [(cst, 'chi2') for _ in test_list for xory in ["SurrY", "SurrX"]]
-                add_hash_ckchi2(df.loc[row,colckchi2], axs)
+                add_hatch_ckchi2(df.loc[row,colckchi2], axs)
         
             if i == 0:
                 axs.set_yticks(np.arange(len(stat_list)), labels = stat_list, **font)
@@ -496,21 +505,21 @@ def heatmap(pvaldf, title, test_list, stat_list, ckchi2 = False, falsepos = Fals
         else:
             cbar.ax.set_ylabel('true positive counts',**font)
         
-        
-        if savehere == '':
-            if ckchi2:
-                savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}"
-            if falsepos:
-                title = title + '_fp' # load falsepos
-                savehere = "Simulated_data/Figures/falsepos"
-            else:
-                savehere = "Simulated_data/Figures/heatmap_results"
-        else:
-            if not os.path.isdir(savehere):
-                os.mkdir(savehere)
-        plt.savefig(f"{savehere}/{title}_ml{ml}.{filextsn}") 
-        plt.show()
-        
+        # if savehere == '':
+        #     if ckchi2:
+        #         savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}"
+        #     if falsepos:
+        #         title = title + '_fp' # load falsepos
+        #         savehere = "Simulated_data/Figures/falsepos"
+        #     else:
+        #         savehere = "Simulated_data/Figures/heatmap_results"
+        # else:
+        #     if not os.path.isdir(savehere):
+        #         os.mkdir(savehere)
+        # plt.savefig(f"{savehere}/{title}_ml{ml}.{filextsn}") 
+        # plt.show()
+
+# SurrY and SurrX separately   surrY{randphase, twin, tts}, surrX{randphase, twin, tts}     
 def heatmap2(pvaldf, title, test_list, stat_list): # , falsepos = False
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     maxlag = set(df.index.get_level_values(0))
@@ -574,11 +583,12 @@ def heatmap2(pvaldf, title, test_list, stat_list): # , falsepos = False
         cbar.ax.tick_params(labelsize = 16)
         cbar.ax.set_ylabel('true positive counts',**font)
 
-        savehere = f"Simulated_data/Figures/heatmap2_results/{title}_ml{ml}.svg"
-        plt.savefig(f"{savehere}")
-        print(f'saved at {savehere}')
+        # savehere = f"Simulated_data/Figures/heatmap2_results/{title}_ml{ml}.svg"
+        # plt.savefig(f"{savehere}")
+        # print(f'saved at {savehere}')
         plt.show()
-        
+
+# Every templates separately {randphase surrY, randphase surrX, twin surrY, twin surrX, tts surrY, tts surrX}        
 def heatmap3(pvaldf, title, test_list, stat_list): # , falsepos = False
     df = pvaldf.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     maxlag = set(df.index.get_level_values(0))
@@ -643,10 +653,108 @@ def heatmap3(pvaldf, title, test_list, stat_list): # , falsepos = False
         cbar.ax.tick_params(labelsize = 16)
         cbar.ax.set_ylabel('true positive counts',**font)
 
-        savehere = f"Simulated_data/Figures/heatmap3_results/{title}_ml{ml}.svg"
-        plt.savefig(f"{savehere}")
+        # savehere = f"Simulated_data/Figures/heatmap3_results/{title}_ml{ml}.svg"
+        # plt.savefig(f"{savehere}")
         # print(f'saved at {savehere}')
         plt.show()
+        
+# Draw heatmap with falsepos hatches
+def add_hatch_falsepos(df_fp, axs, reps = 1000, p = 0.05, confident_range = 0.95, 
+                       scale = 100, rescale = True): # using binomial cutoff
+    # df are all rescaled to 100!
+    # by default, these parameters should work for 1000 trials results but rescaled to 100, that is why the reps = 1000 and rescale = True
+    # from scipy.stats import binom
+    # reps is number of trials  
+    binom_cutoff = binom.ppf(confident_range, reps, p);
+    cutoff10 = 100 
+    if rescale:
+        binom_cutoff = binom_cutoff /reps * scale
+        cutoff10 = 100/reps * scale
+    hatch_cordinates = np.where((df_fp <= cutoff10) & (df_fp >= binom_cutoff))
+    for i in range(len(hatch_cordinates[0])):
+        axs.add_patch(patches.Rectangle((hatch_cordinates[1][i]-0.49,hatch_cordinates[0][i]-0.49),1,1, hatch = '\\\\', edgecolor = 'white', fill = False))
+    
+    # add hatches for >10 as what Caroline did:
+    hatch_cordinates = np.where(df_fp > cutoff10)
+    for i in range(len(hatch_cordinates[0])):
+        axs.add_patch(patches.Rectangle((hatch_cordinates[1][i]-0.49,hatch_cordinates[0][i]-0.49), 1,1, edgecolor = 'black', fill = True, facecolor = 'white'))
+   
+def heatmap_falseposhatches(df, df_fp, title, test_list, stat_list, 
+                            savehere = '', filextsn = 'svg', 
+                            scale = 1000, rescale = True):
+    df = df.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    df_fp = df_fp.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    maxlag = set(df.index.get_level_values(0))
+    col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
+    print(title)
+    
+    # Scaling
+    if rescale:
+        df = df/scale * 100
+        df_fp = df_fp/scale * 100
+        scale = 100
+    bounds = np.arange(0,scale+0.001, scale/10) + 0.001
+    
+    for ml in maxlag: 
+        row = [(ml, _) for _ in stat_list]
+        draw = df.loc[row, col]
+        hatch_fp = df_fp.loc[row, col]
+    
+        fig = plt.figure(figsize = (7,5.5), constrained_layout = True) # figsize = (,), constrained_layout = True
+        grid = fig.add_gridspec(nrows = 1, 
+                                ncols = len(test_list)+1, 
+                                width_ratios = [1]*len(test_list)+[0.25],
+                                hspace = 0, wspace = 0.05)
+        
+        cmap = mpl.cm.cool #viridis 
+        norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+        for i, cst in enumerate(test_list):
+            axs = fig.add_subplot(grid[i])
+            axs.set_aspect("equal")
+            im = axs.imshow(draw[[cst]], cmap = cmap, norm = norm)
+            axs.grid(which = 'minor', color='black', linewidth=3)
+            # axs.pcolormesh(draw[[cst]], cmap = cmap, norm = norm, edgecolors='k', linewidth=5)
+            axs.set_xlabel(cst, **font)
+           
+            axs.set_xticks([0,1], labels = ["surrY", "surrX"], **font)
+            axs.tick_params(top = True, labeltop=True, bottom = False, labelbottom=False)
+            # ax.xaxis.set_ticks_position('top')
+            plt.setp(axs.get_xticklabels(), rotation=30, ha="left", rotation_mode = "anchor")
+    
+            texts = annotate_heatmap(im, valfmt="{x:.0f}", threshold=0, **font_data)
+            
+            add_hatch_falsepos(hatch_fp[[cst]], axs)
+           
+            if i == 0:
+                axs.set_yticks(np.arange(len(stat_list)), labels = stat_list, **font)
+            else:
+                axs.set_yticks([])
+                
+            axs.spines[:].set_visible(False)
+            axs.set_xticks(np.arange(3)-0.5, minor = True)
+            axs.set_yticks(np.arange(len(stat_list)+1)-0.5, minor = True)
+            axs.grid(which = "minor", color='black', linestyle='-', linewidth=2)
+            axs.tick_params(which =  "minor", bottom = False, left = False)
+            
+        fig.suptitle(f'{title}, maxlag {ml}', **font) 
+        # fig.subplots_adjust(right=0.8) 
+        cbar_ax = fig.add_subplot(grid[-1]) 
+        cbar = fig.colorbar(im,
+                            cax=cbar_ax, 
+                            ticks=bounds, 
+                            spacing='proportional' 
+                            )
+        cbar.ax.tick_params(labelsize = 16)
+        cbar.ax.set_ylabel('true positive counts',**font)
+        
+        if savehere == '':
+            savehere = "Simulated_data/Figures/heatmap_results"
+        else:
+            if not os.path.isdir(savehere):
+                os.mkdir(savehere)
+        plt.savefig(f"{savehere}/{title}.{filextsn}") 
+        plt.show()
+        
         
 #%% Draw heatmaps for
 if __name__ == "__main__":
@@ -710,18 +818,19 @@ if __name__ == "__main__":
         
 #%% 
     sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
-    whichrun = 'nolag_surr99'
-    Res = results(sample, whichrun)
+    whichrun = 'nolag_surr199'# 'nolag_surr99'
+    Res = results(sample, whichrun, excl = ['700'])
     Res.into_df()
     stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
     test_list = ('randphase', 'twin', 'tts')
     # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 1000', test_list, stat_list,
     #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
     #         filextsn='svg',
-    #         rescale= False)
+    #         scale= 1000)
     # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 100', test_list, stat_list,
     #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-    #         filextsn='svg')
+    #         filextsn='svg',
+    #         scale = 1000, rescale = True)
     
     #%% Draw histogram
     drawhist = np.array(Res.pvals['maxlag0']['surrY']['randphase']['ccm_y->x'])
@@ -732,17 +841,23 @@ if __name__ == "__main__":
     
 #%%
     sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
-    whichrun = 'nolag_fp_surr99'
-    Resfp = results(sample, whichrun)
+    whichrun = 'nolag_fp_surr199' # 'nolag_fp_surr99'
+    Resfp = results(sample, whichrun, excl = ['400'],incl=['0'])
     Resfp.into_df()
     stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
     test_list = ('randphase', 'twin', 'tts')
-    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
-            falsepos=True,
-            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-            filextsn='svg',
-            rescale= False)
-    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
-            falsepos=True,
-            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-            filextsn='svg')
+    # heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
+    #         falsepos=True,
+    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+    #         filextsn='svg',
+    #         scale= 1000)
+    # heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
+    #         falsepos=True,
+    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+    #         filextsn='svg',
+    #         scale= 1000,
+    #         rescale = True)
+    
+#%%
+    heatmap_falseposhatches(Res.df, Resfp.df, 'True pos with control hatches for false pos 2', test_list, stat_list,
+                            savehere='D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99', filextsn='svg')

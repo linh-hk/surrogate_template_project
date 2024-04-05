@@ -5,8 +5,18 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {surr_proc}     {data_name}     {N_0}           {which_data}
-qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]
+qsub    ...             {cor_stat}      {surr_proc}     {data_name}     {which_data}    {N_0}           
+qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]
+
+for cor_stat, the arguments is an array of the test's initials:
+    + 'a': all
+    + 'p': pearson
+    + 'l': lsa
+    + 'm': mutual_info
+    + 'c' ['ccm_y->x', 'ccm_x->y']
+    + 'g': ['granger_y->x', 'granger_x->y']
+    
+    E.g.: 'a', 'plm', 'cg', 'lg', 'mc', etc.
 
 This script is submited to SGE on UCL cluster as a task. 
 What it does is:
@@ -41,6 +51,23 @@ import pickle # load and save data
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
 #%%
+def sparse_corstat(sys_arg):    
+    if 'a' in sys_arg:
+        return ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
+    else:
+        stats_list = []
+        if 'p' in sys_arg:
+            stats_list.append('pearson')
+        if 'l' in sys_arg:
+            stats_list.append('lsa')
+        if 'm' in sys_arg:
+            stats_list.append('mutual_info')
+        if 'c' in sys_arg:
+            stats_list.extend(['ccm_y->x', 'ccm_x->y'])
+        if 'g' in sys_arg:
+            stats_list.extend(['granger_y->x', 'granger_x->y'])
+        return stats_list
+        
 def load_data(data_name, suffix = ''):
     if 'xy_' in data_name:
         sampdir = f'Simulated_data/{data_name}'
@@ -61,19 +88,26 @@ def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
     return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag),
             'XY': np.array([x,y])}
 
+def name_output(data_name, which_data, cor_stat_arg, test_list, N_0):
+    if '500' in data_name and which_data == '':
+        return '_'.join(test_list+['nolag', 'falsepos']) if 'a' in cor_stat_arg else '_'.join([cor_stat_arg] + test_list+['nolag', 'falsepos']) #, str(N_0)
+    else:
+        return '_'.join(test_list+['nolag', 'falsepos', str(N_0)]) if 'a' in cor_stat_arg else '_'.join([cor_stat_arg] + test_list+['nolag', 'falsepos', str(N_0)]) #
+
 if __name__=="__main__":
-    stats_list = ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
-    test_list = [sys.argv[1]] # , 'twin','randphase'
+    stats_list = sparse_corstat(sys.argv[1])        
+    test_list = [sys.argv[2]] # , 'twin','randphase'
     maxlag = 0
     
-    data_name = sys.argv[2]
-    N_0 = int(sys.argv[3])
+    data_name = sys.argv[3]
     which_data = sys.argv[4]
-    print(f"Running {data_name} sample, data{which_data}.pkl {N_0} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}, falsepos")
+    N_0 = int(sys.argv[5])
+    N = 100
+    print(f"Running {data_name} sample, data{which_data}.pkl {N_0} to {N_0 + N} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}, falsepos")
     data, datagen_param = load_data(data_name, which_data)
     
-    print(f'Sequencing number {N_0} to {N_0+100}')
-    data = data[N_0:N_0+100]
+    print(f'Sequencing number {N_0} to {N_0 + N}')
+    data = data[N_0:N_0 + N]
     # ARGs = []
     resultsList = []
     start = time.time()
@@ -91,14 +125,9 @@ if __name__=="__main__":
              'test_list' : test_list,
              'nsurr' : 99}
     
-    if which_data == '':
-        tests = '_'.join(test_list+['nolag', 'falsepos']) #, str(N_0)
-    else:
-        tests = '_'.join(test_list+['nolag', 'falsepos', str(N_0)]) #
-    if 'xy_' in data_name:
-        fiS = f"Simulated_data/{data_name}/{tests}.pkl"
-    elif '500' in data_name: 
-        fiS = f'Simulated_data/LVextra/{data_name}/{tests}.pkl'
+    out_name = name_output(data_name,which_data, sys.argv[1], test_list, N_0)
+    
+    fiS = f"Simulated_data/{data_name}/{out_name}.pkl" if 'xy_' in data_name else f'Simulated_data/LVextra/{data_name}/{out_name}.pkl'
     print(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);
