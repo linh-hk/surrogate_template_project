@@ -33,7 +33,7 @@ from multiprocessor import Multiprocessor
 
 #%%% Surrogates
     #%%%% Random shuffle
-def get_perm_surrogates(timeseries, n_surr=99):
+def get_perm_surrogates(timeseries, n_surr):
     print("\t\t\t\tpermutations")
     sz = timeseries.size;
     result = np.zeros([sz,n_surr]); # Create mentioned matrix of surrogates
@@ -44,7 +44,7 @@ def get_perm_surrogates(timeseries, n_surr=99):
 """
 Randomly select consecutive blocks of data to construct surrogate sample
 """
-def get_stationary_bstrap_surrogates(timeseries, p_jump=0.05, n_surr=99):
+def get_stationary_bstrap_surrogates(timeseries, n_surr, p_jump=0.05):
     print("\t\t\t\tstationary bootstrap")
     # According to Caroline p_jump = alpha
     sz = timeseries.size
@@ -85,7 +85,7 @@ IAAFT:
     (power spectrum) of surrY so we iteratively adjust the amplitudes of 
     scaled data.
 """
-def get_iaaft_surrogates(timeseries, n_surr=99, n_iter=200):
+def get_iaaft_surrogates(timeseries, n_surr, n_iter=200):
     print("\t\t\t\trandom phase iaaft")
     # prebuilt algorithm in pyunicorn so dont have to create empty matrix
     results = []
@@ -244,7 +244,7 @@ def choose_twin_threshold(timeseries, embed_dim, tau, neighbor_frequency=0.12, d
 
 
 #twin method
-def get_twin_surrogates(timeseries, embed_dim, tau, num_surr=99,
+def get_twin_surrogates(timeseries, embed_dim, tau, num_surr,
                         neighbor_frequency=0.1, th=None):
     if th is None:
         th = choose_twin_threshold(timeseries, embed_dim, tau, neighbor_frequency)
@@ -256,10 +256,10 @@ def get_twin_surrogates(timeseries, embed_dim, tau, num_surr=99,
         results.append(surr)
     return np.array(results).T
 
-def get_twin_wrapper(timeseries,num_surr=99):
+def get_twin_wrapper(timeseries,n_surr, neighbor_frequency=0.1, th=None):
     print("\t\t\t\ttwin")
     embed_dim, tau = choose_embed_params(timeseries);
-    surrs = get_twin_surrogates(timeseries,embed_dim,tau,num_surr);
+    surrs = get_twin_surrogates(timeseries,embed_dim=embed_dim,tau=tau,num_surr=n_surr); # neighbor_frequency=0.1, th=None
     return surrs;
 #%%% tts
 def choose_r(n):
@@ -295,15 +295,15 @@ def iter_scanlag(i, statistic, x, y, kw_statistic):
     return [i, dill.loads(statistic)(x,y,**kw_statistic)]
     # statistic(x[:-2*i],y[2*i:],**kw_statistic)
     
-def scan_lags(x,y,statistic,maxlag=5,kw_statistic={}):
-    print("\t\t\t\t\tScanning best lags with step lags = 2")
+def scan_lags(x,y,statistic,maxlag=5,steplag=1, kw_statistic={}):
+    print(f"\t\t\t\t\tScanning best lags with step lags = {steplag}")
 
     score_sim = statistic(x,y,**kw_statistic);
     # rows: # of y rows
     # columns: # of lags to test, # test lags of (+-)2,4,6,8,10
     score = np.zeros((score_sim.size,2*maxlag+1)); 
     score[:,maxlag] = score_sim # middle column = no lag statistics
-    lags = np.arange(-2*maxlag,2*maxlag+1,2); 
+    lags = np.arange(-steplag*maxlag,steplag*maxlag+1,steplag); 
         
     if (maxlag > 0):
         fun = dill.dumps(statistic)
@@ -311,67 +311,67 @@ def scan_lags(x,y,statistic,maxlag=5,kw_statistic={}):
         for i in np.arange(1,maxlag+1):
             # print(f"\t\t\t\t\t\tmaxlag {i}.1")
             # print(f"\t\t\t\t\t\tlag: x_{2*i} and y_{-2*i}")
-            ARGs = (maxlag+i, fun, x[2*i:],y[:-2*i], kw_statistic)
+            ARGs = (maxlag+i, fun, x[steplag*i:],y[:-steplag*i], kw_statistic)
             mp.add(iter_scanlag, ARGs)
-            ARGs = (maxlag-i, fun, x[:-2*i],y[2*i:], kw_statistic)
+            ARGs = (maxlag-i, fun, x[:-steplag*i],y[steplag*i:], kw_statistic)
             mp.add(iter_scanlag, ARGs)
         mp.run(2) 
         rets = mp.results()
-        for _ in rets: 
-            score[:,_[0]] = np.array(_[1])
+        for idx, val in rets:
+            score[:, idx] = np.array(val)
     return np.vstack((lags,score));
 
-def create_surr(x, y, surr, kw_randphase, kw_twin, r_tts, r_naive):
+def create_surr(x, y, surrmeth, n_surr, kw_randphase, kw_twin, r_tts):
     print("\t\t\tGet surrogates")
-    if surr == 'perm':
-        surr_fxn = get_perm_surrogates
-    if surr == 'bstrap':
-        surr_fxn = get_stationary_bstrap_surrogates
-    if surr == 'twin':
-        surr_fxn = get_twin_wrapper
-    if surr == 'tts_naive':
-        surr_fxn = tts
-    if surr == 'randphase':
-        surr_fxn = get_iaaft_surrogates
-    if surr == 'circperm':
-        surr_fxn = get_circperm_surrogates
-        
+    
     test_params = {}
-    if surr_fxn in [get_perm_surrogates, get_stationary_bstrap_surrogates, get_twin_wrapper]:
+    test_params['n_surr'] = n_surr
+    if surrmeth in ['perm', 'bstrap', 'twin']:
         xstar = x
         ystar = y
-        test_params['no params'] = None
-        surr = surr_fxn(y, **kw_twin);
-    if surr_fxn in [get_circperm_surrogates, get_iaaft_surrogates]:
+        if surrmeth == 'twin':
+            surr = get_twin_wrapper(ystar, n_surr=n_surr, **kw_twin); # neighbor_frequency=0.1, th=None
+        elif surrmeth == 'perm':
+            surr = get_perm_surrogates(ystar, n_surr=n_surr);
+        elif surrmeth == 'bstrap':
+            surr = get_stationary_bstrap_surrogates(ystar, n_surr=n_surr); # p_jump=0.05
+    
+    elif surrmeth in ['circperm', 'randphase']:
         k_start,k_end = trim_periodic_data(y);
         test_params['trim kstart_kend'] = [k_start,k_end]
         xstar = x[k_start:k_end+1]
         ystar = y[k_start:k_end+1]
-        surr = surr_fxn(ystar, **kw_randphase);
-    if surr_fxn == tts:
+        
+        if surrmeth == 'randphase':
+            surr = get_iaaft_surrogates(ystar, n_surr=n_surr, **kw_randphase); # n_iter=200
+        elif surrmeth == 'circperm':
+            surr = get_circperm_surrogates(ystar);
+    
+    elif surrmeth == 'tts_naive':
         if type(r_tts) is type(1): # if manually pick r
             r = r_tts
             def r_tts(x):
                 return r
         r = r_tts(x.size)
         test_params['r_tts'] = r
-        xstar, ystar, surr = tts(x, y, r)
+        xstar, ystar, surr = tts(x=x, y=y, r=r)
+    
     return xstar, ystar, surr, test_params
 
-def sig_test_good(xstar, ystar, surr, statistic, maxlag, shorter=False, kw_statistic = {}):     
+def sig_test_good(xstar, ystar, surr, statistic, maxlag, steplag, shorter=False, kw_statistic = {}):     
     #find statistic from original data
     print("\t\t\t\tCalculating original stats with scan_lags")
-    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic,maxlag, kw_statistic)
+    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic)
     score = np.max(scanlag[1]); # no np.max in test_bad
     
     # sometimes twin produce surrogates shorter than original series (example: FitzHugh_Nagumo_cont[14] embed_dim =3, tau = 1, the surr is only 498)
     if xstar.shape[0] != surr.shape[0]:
         shorter = True
         xstar = xstar[:surr.shape[0]]
-    #find null statistic for each surrogate 
-    #using same maximizing procedure as original
+    # find null statistic for each surrogate 
+    # using same maximizing procedure as original
     print("\t\t\t\tCalculating null stats with scan_lags")
-    scanlagsurr = scan_lags(xstar,surr,statistic,maxlag, kw_statistic)
+    scanlagsurr = scan_lags(xstar,surr,statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic)
     null = np.max(scanlagsurr[1:],axis=1);
     
     #one tailed test
@@ -412,23 +412,52 @@ def whichstats(stat, xory):
     return stat_fxn
     # 'pcc_param', 'granger_param_y->x', 'granger_param_x->y'
     
-def iter_stats(a, b, surr, stats_list, maxlag, xory, kw_randphase, kw_twin, r_tts, r_naive, kw_statistic = {}):#
+def iter_stats(a, b, surrmeth, n_surr, stats_list, maxlag, steplag, xory, kw_randphase, kw_twin, r_tts, kw_statistic = {}):#
     # print(a[0], b[0], stats_list, maxlag, xory)
     # res = ['pvals': {}, 'runtimes': {}, 'test_params': {}]
     test_params = {'maxlag': maxlag}
-    A, B, SURR, test_params['surr_params'] = create_surr(a, b, surr, kw_randphase, kw_twin, r_tts, r_naive)
+    A, B, SURR, test_params['surr_params'] = create_surr(a, b, surrmeth, n_surr=n_surr, kw_randphase=kw_randphase, kw_twin=kw_twin, r_tts=r_tts)
     pvals = {}
     runtimes = {}
     for stat in stats_list:
         print(f'Running {stat} in many stats for Y or X surr')
         stat_fxn = whichstats(stat, xory)
         start = time.time()
-        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, kw_statistic = kw_statistic)
+        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, steplag=steplag, kw_statistic = kw_statistic)
         runtimes[stat] = time.time() - start
     return pvals, runtimes, test_params
    
 # from multiprocessing import Pool 
-def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, kw_randphase={}, kw_twin={}, r_tts=choose_r, r_naive=choose_r, kw_statistic={}):
+def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={}):
+    '''
+    calls -> iter_stats -> sig_test_good which is currently running tailored lag by default.
+    the option for fixed lag has not been developed
+    Parameters
+    ----------
+    x : time series 1
+    y : time series 2
+    stats_list : defined below. The default is 'all'.
+    test_list : defined below. The default is 'all'.
+    maxlag : int, -> iter_stats -> sig_test_good -> scan_lags. The default is 0.
+    n_surr : int, >20 recommended number of surrogates for null distribution
+        DESCRIPTION. The default is 99.
+    kw_randphase : dict, for randomphase IAAFT , probably {'n_iter': 200}
+        DESCRIPTION. The default is {} because n_iter has been defaulted in function.
+    kw_twin : neighbor_frequency=0.1, th=None. 
+        DESCRIPTION. The default is {}.
+    r_tts : Int, 
+        DESCRIPTION. The default is choose_r.
+    kw_statistic : TYPE, optional
+        DESCRIPTION. The default is {}.
+
+    Returns
+    -------
+    result : TYPE
+        DESCRIPTION.
+
+    '''
+    
+    
     if test_list == 'all':
         test_list = ['randphase', 'bstrap', 'twin','tts', 'tts_naive', 'circperm','perm']
     if stats_list == 'all':
@@ -443,13 +472,13 @@ def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, kw_ran
     runtime = {'surrY': {}, 'surrX': {}};
     test_params = {'surrY': {}, 'surrX': {}}
     
-    for surr in test_list:
-        ARGsurrY = (x, y, surr, stats_list, maxlag, 'surrY', kw_randphase, kw_twin, r_tts, r_naive, kw_statistic)# 
-        ARGsurrX = (y, x, surr, stats_list, maxlag, 'surrX', kw_randphase, kw_twin, r_tts, r_naive, kw_statistic)# 
-        print(f'Running {surr} for Y')
-        score_null_pval['surrY'][surr], runtime['surrY'][surr], test_params['surrY'][surr] = iter_stats(*ARGsurrY)
-        print(f'Running {surr} for X') 
-        score_null_pval['surrX'][surr], runtime['surrX'][surr], test_params['surrX'][surr] = iter_stats(*ARGsurrX)
+    for surrmeth in test_list:
+        ARGsurrY = (x, y, surrmeth, n_surr, stats_list, maxlag, steplag, 'surrY', kw_randphase, kw_twin, r_tts, kw_statistic)# 
+        ARGsurrX = (y, x, surrmeth, n_surr, stats_list, maxlag, steplag, 'surrX', kw_randphase, kw_twin, r_tts, kw_statistic)# 
+        print(f'Running {surrmeth} for Y')
+        score_null_pval['surrY'][surrmeth], runtime['surrY'][surrmeth], test_params['surrY'][surrmeth] = iter_stats(*ARGsurrY)
+        print(f'Running {surrmeth} for X') 
+        score_null_pval['surrX'][surrmeth], runtime['surrX'][surrmeth], test_params['surrX'][surrmeth] = iter_stats(*ARGsurrX)
     # tts_p = {xory : {'tts': {stat : [B * (2 * r + 1) / (r + 1) for B in pvals[xory]['tts_naive'][stat] ]
     #                         for stat in new_res['stats_list']}
     #                     }
