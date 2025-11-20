@@ -96,7 +96,7 @@ def name_output(data_name, which_data, cor_stat_arg, test_list, N_0):
 
 if __name__=="__main__":
     stats_list = sparse_corstat(sys.argv[1])        
-    test_list = [sys.argv[2]] # , 'twin','randphase'
+    test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
     maxlag = 0
     
     data_name = sys.argv[3]
@@ -123,7 +123,8 @@ if __name__=="__main__":
     saveP = {'pvals' : resultsList,
              'stats_list' : stats_list,
              'test_list' : test_list,
-             'nsurr' : 99}
+             'nsurr' : 99,
+             'maxlag': maxlag}
     
     out_name = name_output(data_name, input_, sys.argv[1], test_list, N_0)
     

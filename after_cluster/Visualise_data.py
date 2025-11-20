@@ -46,14 +46,14 @@ font_data = {'fontsize' : 22, 'fontweight' : 'bold', 'fontname' : 'arial','color
 # texts = annotate_heatmap(im, valfmt="{x:.0f}", threshold=0, **font_data)
 
 #%% Load data
-def load_data(sample, suffix = ''):
-    if 'xy_' in sample:
-        sampdir = f'Simulated_data/{sample}'
-    elif '500' in sample:
-        sampdir = f'Simulated_data/LVextra/{sample}'
-    with open(f'{sampdir}/data{suffix}.pkl', 'rb') as fi:
+def load_data(data_name, input_ = 'data'):
+    if 'xy_' in data_name:
+        sampdir = f'Simulated_data/{data_name}'
+    elif '500' in data_name:
+        sampdir = f'Simulated_data/LVextra/{data_name}'
+    with open(f'{sampdir}/{input_}.pkl', 'rb') as fi:
         data = pickle.load(fi)
-    return data
+    return data['data'], data['datagen_params']
 # if __name__ == "__main__":
     # data = {}
     # for sample in os.listdir('Simulated_data'):
@@ -95,17 +95,16 @@ def vis_data(XY, title, saveto = "Simulated_data/Figures", filextsn = 'svg'):
     ax.set_xlabel('Time index', **font)
     ax.set_ylabel('X and Y value', **font)
     ax.set_title(f'{title}', **font_data)
-    ax.scatter(tmp, X, color = 'red', s = 10) # "blue"
-    ax.scatter(tmp, Y, color = 'blue', s = 10) # "#ff6600"
+    ax.scatter(tmp, X, color = 'red', s = 5) # "blue"
+    ax.scatter(tmp, Y, color = 'blue', s = 5) # "#ff6600"
 
     ax.tick_params(labelsize = 17)
-    # ax.set_xticklabels(col_labels,**font)
-    # ax.set_yticklabels(row_labels,**font)
+    ax.set_xticklabels(ax.get_xticklabels(), **font) # col_labels
+    ax.set_yticklabels(ax.get_yticklabels(), **font) # row_labels
     
-    # if not os.path.exists(f"{saveto}/data/"):
-    #     os.makedirs(f"{saveto}/data/")
-    # plt.savefig(f"{saveto}/data/{title}.{filextsn}") 
-    plt.savefig(f"{saveto}/data/{title}.{filextsn}")
+    if not os.path.exists(f"{saveto}/data/"):
+        os.makedirs(f"{saveto}/data/")
+    plt.savefig(f"{saveto}/data/{title}.{filextsn}") 
     
     plt.show()
     
@@ -276,6 +275,16 @@ if __name__ == "__main__":
     # vis_data(seqs['UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05'][0], 'UComp1Fast_11_normalised', "Simulated_data\Figures\data")
 #%%
     sample = 'EMut_1.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05'
-    data = load_data(sample)
+    data, datagen_param = load_data(sample)
     for i in range(len(data['data'])):
         vis_data(data['data'][i], f'EMutSlow_20 series {i}')
+        
+#%%
+    sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
+    data, datagen_param = load_data(sample)
+    vis_data(data[0], 'ECompFast_20', saveto='D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/')
+    
+    #%%
+    sample = 'xy_Caroline_LV_mutualistic'
+    data, datagen_param = load_data(sample)
+    vis_data(data[0], 'EMutSlow_11', saveto='D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/')

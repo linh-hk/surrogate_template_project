@@ -1,6 +1,6 @@
-#$ -l tmem=2G
-#$ -l h_vmem=2G
-#$ -l h_rt=02:00:00
+#$ -l tmem=4G
+#$ -l h_vmem=4G
+#$ -l h_rt=04:00:00
 #$ -pe smp 8
 #$ -R y
 
@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "SCOR_DOT"
+#$ -N "SCOR_DOT_extend"
 
 #$ -cwd
 

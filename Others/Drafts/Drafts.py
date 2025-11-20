@@ -1630,6 +1630,21 @@ from scipy.stats import binom
 # reps is number of trials  
 reps  = 1000
 false_cutoff = binom.ppf(0.95,reps,0.05);
+#%%
+import numpy as np
+x= np.arange(0,1001,1)
+y = binom.cdf(x, n = 1000, p=0.05)
+from matplotlib import pyplot as plt
+
+fig, ax = plt.subplots()
+ax.scatter(x, y, s = 1, color = 'black')
+ax.set_xlabel('# of false positives with pval 0.05 out of 1000')
+ax.set_ylabel(r'cdf probability - probability of $ \leq x $')
+ax.axhline(y=0.95,linewidth = 0.75, linestyle=":", color = "red")
+ax.text(300, 0.90, 'y=0.95', color= 'red')
+ax.axvline(x=binom.ppf(0.95, reps, 0.05), linewidth = 0.75, linestyle=":", color = "green")
+ax.text(binom.ppf(0.95, reps, 0.05)+10,0, f'inverse cdf x = {binom.ppf(0.95, reps, 0.05)}', color = 'green')
+mpl.pyplot.show()
 
 #%%
 fig, ax = plt.subplots()
@@ -2257,3 +2272,50 @@ for sample in os.listdir('Simulated_data'):
                 
                 with open(f'{sampdir}/{fi}', 'wb') as file:
                     pickle.dump(falsepos, file)
+                    
+                    
+    #%%
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/randphase_nolag_falsepos.pkl', 'rb') as file:
+        rp_nolag_fp_99 = pickle.load(file)
+
+    rp_nolag_fp_99['nsurr']=99
+
+    pvals = [{_key+900 : _val} for _ in rp_nolag_fp_99['pvals'] for _key, _val in _.items()]
+
+    rp_nolag_fp_99['pvals'] = pvals
+
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/randphase_nolag_falsepos_900.pkl', 'wb') as file:
+        pickle.dump(rp_nolag_fp_99, file)
+        
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/randphase_nolag_falsepos_900.pkl', 'rb') as file:
+        rp_nolag_fp_900 = pickle.load(file)
+        
+    #%%
+    
+    whichrun = 'nolag_fp_surr99'
+    filename = 'tts_naive_nolag_falsepos'
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/{filename}.pkl', 'rb') as file:
+        obj = pickle.load(file)
+
+    obj['nsurr']=99
+
+    pvalsmoi = [{_key+900 : _val} for _ in obj['pvals'] for _key, _val in _.items()]
+
+    obj['pvals'] = pvalsmoi
+
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/{filename}_900.pkl', 'wb') as file:
+        pickle.dump(obj, file)
+        
+    with open(f'Simulated_data/LVextra/{sample}/{whichrun}/{filename}_900.pkl', 'rb') as file:
+        moi = pickle.load(file)
+        
+        
+    #%%
+    with open(f'Simulated_data/LVextra/{sample}/data.pkl', 'rb') as file:
+        data = pickle.load(file)
+    with open(f'Simulated_data/LVextra/{sample}/data900.pkl', 'rb') as file:
+        data900 = pickle.load(file)
+        
+    new = data900['data'] + data['data']
+    data900['data'] = new
+    

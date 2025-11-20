@@ -82,10 +82,11 @@ def load_data(data_name, input_ = 'data'):
     #           for _ in range(num_trials)]
     # return data_fp, data['datagen_params']
 
-def run_each_ts(pair, pair_id, stats_list, test_list, maxlag):
+def run_each_ts(pair, pair_id, stats_list, test_list, maxlag, nsurr):
     x = pair[0]
     y = pair[1]
-    return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag),
+    # manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={})
+    return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag=maxlag, n_surr=nsurr),
             'XY': np.array([x,y])}
 
 def name_output(data_name, which_data, cor_stat_arg, test_list, N_0):
@@ -96,8 +97,9 @@ def name_output(data_name, which_data, cor_stat_arg, test_list, N_0):
         
 if __name__=="__main__":
     stats_list = sparse_corstat(sys.argv[1])        
-    test_list = [sys.argv[2]] # , 'twin','randphase'
+    test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
     maxlag = 0
+    nsurr = 99
     
     data_name = sys.argv[3]
     input_ = sys.argv[4]
@@ -112,7 +114,7 @@ if __name__=="__main__":
     resultsList = []
     start = time.time()
     for series in enumerate(data):
-        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag)
+        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag, nsurr)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
         print(f'Series #{series[0]} run in {time.time()-start}')
@@ -123,7 +125,8 @@ if __name__=="__main__":
     saveP = {'pvals' : resultsList,
              'stats_list' : stats_list,
              'test_list' : test_list,
-             'nsurr' : 99}
+             'nsurr' : nsurr,
+             'maxlag': maxlag}
     
     out_name = name_output(data_name, input_, sys.argv[1], test_list, N_0)
     

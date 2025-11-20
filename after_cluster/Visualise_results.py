@@ -119,13 +119,17 @@ def rename(sample):
         return sample
     
 def merge_data(results, test_list, stat_list):
-    maxlag = set([sublist['pvals'][0][list(sublist['pvals'][0])  [0]]['test_params']['surrY'][sublist['test_list'][0]]['maxlag']
-                  for sublist in results])
+    maxlag = set([ cst['maxlag']
+                  for sublist in results 
+                  for trials in sublist['pvals'] 
+                  for _ in trials.values() if type(_) != type(np.array([])) 
+                  for xory in ['surrY', 'surrX'] 
+                  for cst in _['test_params'][xory].values()])
     n_surr = set([sublist['nsurr'] for sublist in results])
     pvalss = {}
     for ml in maxlag:
-        intermed = [_ for sublist in results for _ in sublist['pvals'] if 
-                    sublist['pvals'][0][ list(sublist['pvals'][0])[0] ]['test_params']['surrY'][sublist['test_list'][0]]['maxlag'] == ml]
+        intermed = [_ for sublist in results 
+                    for _ in sublist['pvals']]
         pvalss[f'maxlag{ml}'] = merge(*intermed)           
     
     try:
@@ -179,7 +183,7 @@ class results:
                 results.append({'pvals': [{_key : _val} for _ in i['pvals'] for _key, _val in _.items()],#_key+900
                                 'stats_list': i['stats_list'],
                                 'test_list': i['test_list'],
-                                'nsurr': 199})
+                                'nsurr': 99})
                 # results.remove(i)
         results = [_ for _ in results if 'nsurr' in _.keys()] 
         # results = resultss
@@ -340,36 +344,6 @@ def testing(results):
         #                             np.array(results.pvals[f'maxlag{ml}']['surrX'][cst][stat]) <= 0.05))
     return [_[0] for _ in ck], [_[1] for _ in ck], [_[2] for _ in ck]
 
-#%% Load results
-if __name__ == "__main__":
-    # ignore = ['EComp_0.25_500_1.0,1.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05', 
-    #           'EMut_0.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05', 
-    #           'equal_ncap_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05']
-    Res = {}
-    # for sample in os.listdir('Simulated_data'):
-    #     if 'xy' in sample and 'predprey' not in sample:
-    #         renamed = rename(sample)
-    #         print(sample)
-    #         Res[renamed]=results(sample)
-    # for sample in os.listdir('Simulated_data/LVextra'):
-    # for sample in ['EComp_0.25_500_1.0,1.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05','EMut_0.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05']:
-    for sample in ['equal_ncap_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05']:
-        Res[sample]=results(sample)
-    #     if '500' in sample:# and sample not in ignore # load falsepos
-    #         print(sample)
-    #         Res[sample]=results(sample)
-    
-    for key, val in Res.items():
-    #     print(key)
-        val.into_df()
-        val.into_df(falsepos = True)
-    #     val.add_CohenKappa()
-    #     val.add_chi2()
-        
-    # test1 = testing(Res['xy_ar_u'])
-    # for key, val in Res.items():
-    #     testing(val)
-
 #%% Draw heatmaps
 from scipy.stats import binom # for binom cut-off
 
@@ -505,19 +479,19 @@ def heatmap(pvaldf, title, test_list, stat_list,
         else:
             cbar.ax.set_ylabel('true positive counts',**font)
         
-        # if savehere == '':
-        #     if ckchi2:
-        #         savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}"
-        #     if falsepos:
-        #         title = title + '_fp' # load falsepos
-        #         savehere = "Simulated_data/Figures/falsepos"
-        #     else:
-        #         savehere = "Simulated_data/Figures/heatmap_results"
-        # else:
-        #     if not os.path.isdir(savehere):
-        #         os.mkdir(savehere)
+        if savehere == '':
+            if ckchi2:
+                savehere = f"Simulated_data/Figures/{heatmap}_{ckchi2}"
+            if falsepos:
+                title = title + '_fp' # load falsepos
+                savehere = "Simulated_data/Figures/falsepos"
+            else:
+                savehere = "Simulated_data/Figures/heatmap_results"
+        else:
+            if not os.path.isdir(savehere):
+                os.mkdir(savehere)
         # plt.savefig(f"{savehere}/{title}_ml{ml}.{filextsn}") 
-        # plt.show()
+        plt.show()
 
 # SurrY and SurrX separately   surrY{randphase, twin, tts}, surrX{randphase, twin, tts}     
 def heatmap2(pvaldf, title, test_list, stat_list): # , falsepos = False
@@ -757,80 +731,129 @@ def heatmap_falseposhatches(df, df_fp, title, test_list, stat_list,
         
         
 #%% Draw heatmaps for
+# if __name__ == "__main__":
+#     stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+#     test_list = ('randphase', 'twin', 'tts')
+#     # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
+#     # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
+#     for key, val in Res.items():
+#         heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
+#         heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list)
+#         # if 'UComp3' in key:
+#         #     heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
+#         # if 'EComp' in key:
+#             # heatmap3(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
+#%% Load results
 if __name__ == "__main__":
-    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
-    test_list = ('randphase', 'twin', 'tts')
-    # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
-    # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
-    for key, val in Res.items():
-        heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
-        heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list)
-        # if 'UComp3' in key:
-        #     heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
-        # if 'EComp' in key:
-            # heatmap3(val.df, key, ('randphase', 'twin', 'tts'), stat_list) # , ckchi2='ck' or 'chi2'
-#%% Visualise normalised special cases:
-    """ 
-    For codes of results() before adding 'normalised' to path/to/fi
-    """
-    samplelist = ['xy_Caroline_LV_asym_competitive', 
-                  'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
-                  'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
-    Res = {}
-    for sample in samplelist:
-        Res[sample] = results(sample)
-        print(sample)
+    # # ignore = ['EComp_0.25_500_1.0,1.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05', 
+    # #           'EMut_0.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05', 
+    # #           'equal_ncap_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05']
+    # Res = {}
+    # # for sample in os.listdir('Simulated_data'):
+    # #     if 'xy' in sample and 'predprey' not in sample:
+    # #         renamed = rename(sample)
+    # #         print(sample)
+    # #         Res[renamed]=results(sample)
+    # # for sample in os.listdir('Simulated_data/LVextra'):
+    # # for sample in ['EComp_0.25_500_1.0,1.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05','EMut_0.25_500_2.0,0.0_0.7,0.7_-0.4,0.3,0.3,-0.4_0.01_0.05']:
+    # for sample in ['equal_ncap_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05']:
+    #     Res[sample]=results(sample)
+    # #     if '500' in sample:# and sample not in ignore # load falsepos
+    # #         print(sample)
+    # #         Res[sample]=results(sample)
+    
+    # for key, val in Res.items():
+    # #     print(key)
+    #     val.into_df()
+    #     val.into_df(falsepos = True)
+    # #     val.add_CohenKappa()
+    # #     val.add_chi2()
         
-    for key, val in Res.items():
-        val.into_df()
+    # # test1 = testing(Res['xy_ar_u'])
+    # # for key, val in Res.items():
+    # #     testing(val)#%% Visualise normalised special cases:
+    # """ 
+    # For codes of results() before adding 'normalised' to path/to/fi
+    # """
+    # samplelist = ['xy_Caroline_LV_asym_competitive', 
+    #               'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
+    #               'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
+    # Res = {}
+    # for sample in samplelist:
+    #     Res[sample] = results(sample)
+    #     print(sample)
         
-    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
-    test_list = ('randphase', 'twin', 'tts')
-    # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
-    # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
-    for key, val in Res.items():
-        # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
-        heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list, 
-                savehere='C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/normalised',
-                filextsn='svg')
-#%%
-    samplelist = ['xy_Caroline_LV_asym_competitive', 
-                  'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
-                  'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
-    whichnorm = 'normzscore' # 'normminmax' 'normrank'
-    Res = {}
-    for sample in samplelist:
-        Res[sample] = results(sample, excl=['falsepos'], incl=[whichnorm])
-        print(sample)
+    # for key, val in Res.items():
+    #     val.into_df()
         
-    for key, val in Res.items():
-        val.into_df()
+    # stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    # test_list = ('randphase', 'twin', 'tts')
+    # # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
+    # # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
+    # for key, val in Res.items():
+    #     # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
+    #     heatmap(val.df, key, ('randphase', 'twin', 'tts'), stat_list, 
+    #             savehere='C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/normalised',
+    #             filextsn='svg')
+#%% Run different normalisation methods
+    # samplelist = ['xy_Caroline_LV_asym_competitive', 
+    #               'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05',
+    #               'UComp_0.25_500_1.0,1.0_0.8,0.8_-0.4,-0.5,-0.9,-0.4_0.01_0.05']
+    # whichnorm = 'normzscore' # 'normminmax' 'normrank'
+    # Res = {}
+    # for sample in samplelist:
+    #     Res[sample] = results(sample, excl=['falsepos'], incl=[whichnorm])
+    #     print(sample)
         
-    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
-    test_list = ('randphase', 'twin', 'tts')
-    # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
-    # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
-    for key, val in Res.items():
-        # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
-        heatmap(val.df, f'{key} {whichnorm}', ('randphase', 'twin', 'tts'), stat_list, 
-                savehere=f'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/{whichnorm}',
-                filextsn='svg')
+    # for key, val in Res.items():
+    #     val.into_df()
         
-#%% 
+    # stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    # test_list = ('randphase', 'twin', 'tts')
+    # # heatmap(cap.df, 'cap', ['randphase', 'twin', 'tts'], cap.stat_list)
+    # # heatmap(uncap.df, 'uncap', ['randphase', 'twin', 'tts'], uncap.stat_list)
+    # for key, val in Res.items():
+    #     # heatmap(val.fp_df, key, test_list, stat_list, falsepos = True)
+    #     heatmap(val.df, f'{key} {whichnorm}', ('randphase', 'twin', 'tts'), stat_list, 
+    #             savehere=f'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/{whichnorm}',
+    #             filextsn='svg')
+        
+#%% Figure 5
     sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
-    whichrun = 'nolag_surr199'# 'nolag_surr99'
-    Res = results(sample, whichrun, excl = ['700'])
+    
+    whichrun = 'nolag_surr99' # 'nolag_surr199'# 
+    Res = results(sample, whichrun) # , excl = ['700']
     Res.into_df()
     stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
     test_list = ('randphase', 'twin', 'tts')
-    # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 1000', test_list, stat_list,
-    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-    #         filextsn='svg',
-    #         scale= 1000)
-    # heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 100', test_list, stat_list,
-    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-    #         filextsn='svg',
-    #         scale = 1000, rescale = True)
+    heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 1000', test_list, stat_list,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000)
+    heatmap(Res.df, 'ECompFast_20 surr99 1000 samples scale 100', test_list, stat_list,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale = 1000, rescale = True)
+    
+    whichrun = 'nolag_fp_surr99' # 'nolag_fp_surr199' # 
+    Resfp = results(sample, whichrun) # , excl = ['400'],incl=['0']
+    Resfp.into_df()
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000)
+    heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000,
+            rescale = True)
+    
+    heatmap_falseposhatches(Res.df, Resfp.df, 'True pos with control hatches for false pos 2', test_list, stat_list,
+                            savehere='D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99', filextsn='svg')
     
     #%% Draw histogram
     drawhist = np.array(Res.pvals['maxlag0']['surrY']['randphase']['ccm_y->x'])
@@ -839,25 +862,80 @@ if __name__ == "__main__":
     ax.hist(drawhist, bins = hist_bins)
     fig.suptitle(t = 'randphase ccm_y->x')
     
-#%%
-    sample = 'EComp_0.25_500_2.0,0.0_0.7,0.7_-0.4,-0.5,-0.5,-0.4_0.01_0.05'
-    whichrun = 'nolag_fp_surr199' # 'nolag_fp_surr99'
-    Resfp = results(sample, whichrun, excl = ['400'],incl=['0'])
+    #%% Save csv Fig5
+    
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
+    row = [('0', _) for _ in stat_list]
+    
+    DataF_5 = Res.df
+    DataFfp_5 = Resfp.df
+
+    # DataF_5 = DataF_5/1000 * 100
+    # df_fp = df_fp/1000 * 100
+    # scale = 100
+    test = DataF_5.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    test = test.loc[row,col]
+    test.to_csv('C:/Users/hoang/Dropbox (Personal)/independence_tests/data/Figure5and8/Fig5tpr_1000counts.csv', sep=',', index=True, encoding='utf-8')
+
+    testfp = DataFfp_5.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    testfp = testfp.loc[row,col]
+    testfp.to_csv('C:/Users/hoang/Dropbox (Personal)/independence_tests/data/Figure5and8/Fig5fpr_1000counts.csv', sep=',', index=True, encoding='utf-8')
+
+    
+#%% Figure 8
+    sample = 'xy_Caroline_LV_mutualistic'
+    
+    whichrun = 'nolag_surr99'# 'nolag_surr99'
+    Res = results(sample, whichrun)
+    Res.into_df()
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    heatmap(Res.df, 'EMutSlow_11 surr99 1000 samples scale 900', test_list, stat_list,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000)
+    heatmap(Res.df, 'EMutSlow_11 surr99 1000 samples scale 100', test_list, stat_list,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn = 'svg',
+            scale = 1000, rescale = True)
+    
+    whichrun = 'nolag_fp_surr99' # 'nolag_fp_surr99'
+    Resfp = results(sample, whichrun)
     Resfp.into_df()
     stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
     test_list = ('randphase', 'twin', 'tts')
-    # heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
-    #         falsepos=True,
-    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-    #         filextsn='svg',
-    #         scale= 1000)
-    # heatmap(Resfp.df, 'ECompFast_20 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
-    #         falsepos=True,
-    #         savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
-    #         filextsn='svg',
-    #         scale= 1000,
-    #         rescale = True)
+    heatmap(Resfp.df, 'EMutSlow_11 Falsepos surr99 1000 samples scale 1000', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000)
+    heatmap(Resfp.df, 'EMutSlow_11 Falsepos surr99 1000 samples scale 100', test_list, stat_list,
+            falsepos=True,
+            savehere = 'D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99',
+            filextsn='svg',
+            scale= 1000,
+            rescale = True)
     
-#%%
-    heatmap_falseposhatches(Res.df, Resfp.df, 'True pos with control hatches for false pos 2', test_list, stat_list,
+    heatmap_falseposhatches(Res.df, Resfp.df, 'EMutSlow_11 True pos with control hatches for false pos 2', test_list, stat_list,
                             savehere='D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/1000trials_surr99', filextsn='svg')
+    #%% Save csv Fig8
+    stat_list = ('pearson', 'lsa', 'mutual_info', 'granger_y->x', 'granger_x->y','ccm_y->x', 'ccm_x->y')
+    test_list = ('randphase', 'twin', 'tts')
+    col = [(_, xory) for _ in test_list for xory in ["SurrY", "SurrX"]]
+    row = [('0', _) for _ in stat_list]
+    
+    DataF_8 = Res.df
+    DataFfp_8 = Resfp.df
+
+    # DataF_5 = DataF_5/1000 * 100
+    # df_fp = df_fp/1000 * 100
+    # scale = 100
+    test = DataF_8.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    test = test.loc[row,col]
+    test.to_csv('C:/Users/hoang/Dropbox (Personal)/independence_tests/data/Figure5and8/Fig8tpr_1000counts.csv', sep=',', index=True, encoding='utf-8')
+
+    testfp = DataFfp_8.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
+    testfp = testfp.loc[row,col]
+    testfp.to_csv('C:/Users/hoang/Dropbox (Personal)/independence_tests/data/Figure5and8/Fig8fpr_1000counts.csv', sep=',', index=True, encoding='utf-8')
