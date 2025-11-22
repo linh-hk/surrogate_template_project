@@ -140,7 +140,7 @@ stats_list = "all"
 test_list = ['randphase', 'twin', 'tts']
 nsurr = 999
 
-def _wrapper(df, stats_list, test_list, maxlag, nsurr):
+def _wrapper(df, stats_list, test_list, maxlag, n_surr):
     x = np.array(df["SCOR"])
     y = np.array(df["DOT"])
     return (manystats_manysurr(x, y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr))
