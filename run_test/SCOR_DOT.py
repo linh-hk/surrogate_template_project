@@ -143,27 +143,51 @@ nsurr = 999
 def _wrapper(df, stats_list, test_list, maxlag, n_surr):
     x = np.array(df["SCOR"])
     y = np.array(df["DOT"])
-    return (manystats_manysurr(x, y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr))
+    return (manystats_manysurr(x, y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=n_surr))
+
+def save_res(res, name):
+    filepath = 'Real_data/Common_species_link_global_ecosystems_to_climate_change/'
+    filename = filepath + name + '.pkl'
+    with open(filename, 'wb') as fi:
+        pickle.dump(res, fi);
+    print(f"Saved at {filename}")
+    print(time.time()-start)
 
 # res = _wrapper(SCOR_DOT)
 # res_N = _wrapper(SCOR_DOT_N)
 # res_D = _wrapper(SCOR_DOT_D)
 maxlag = 4
 res_DN_ml4 = _wrapper(SCOR_DOT_DN, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr)
-
+savethisml4 = {
+    "SCOR_DOT": SCOR_DOT,
+    "SCOR_DOT_DN": SCOR_DOT_DN,
+    "res_DN_ml4": res_DN_ml4,
+    "stats_list": stats_list,
+    "test_list" : test_list,
+    "nsurr": nsurr,
+    "maxlag": 4}
+save_res(savethisml4, f"SCOR_DOT_cluster_extended_nsurr{nsurr}_ml4")
 maxlag = 0 
 res_DN_ml0 = _wrapper(SCOR_DOT_DN, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr)
-
+savethisml0 = {
+    "SCOR_DOT": SCOR_DOT,
+    "SCOR_DOT_DN": SCOR_DOT_DN,
+    "res_DN_ml0": res_DN_ml0,
+    "stats_list": stats_list,
+    "test_list" : test_list,
+    "nsurr": nsurr,
+    "maxlag": 0}
+save_res(savethisml0, f"SCOR_DOT_cluster_extended_nsurr{nsurr}_ml0")
 #%% On cluster, run these
-save_this = {}
-for key, vals in globals().items():
-    if type(vals) == type(globals()['os']):
-        continue
-    save_this[key] = vals
+# save_this = {
+#     "SCOR_DOT": SCOR_DOT,
+#     "SCOR_DOT_DN": SCOR_DOT_DN,
+#     "res_DN_ml4": res_DN_ml4,
+#     "res_DN_ml0":}
 
-filename = f'Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_extended_nsurr{nsurr}.pkl'
-with open(filename, 'wb') as fi:
-    pickle.dump(save_this, fi);
-print(f"Saved at {filename}")
-print(time.time()-start)
+# filename = f'Real_data/Common_species_link_global_ecosystems_to_climate_change/SCOR_DOT_cluster_extended_nsurr{nsurr}.pkl'
+# with open(filename, 'wb') as fi:
+#     pickle.dump(save_this, fi);
+# print(f"Saved at {filename}")
+# print(time.time()-start)
 # results, runtime = test
