@@ -358,28 +358,85 @@ def lotkaVolterraSat(t,y,mu,M,K):
     lv = y * (mu + intx_mat @ y);
     return lv;
 
-def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra): # ,intx="competitive"
+def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra, measurement_noise = 0): # ,intx="competitive"
     print('Generating Caroline Lotka-Volterra model')
     dt=0.05; # integration step
     lag = int(150/dt);
     sample_period = int(np.ceil(dt_s / dt)); 
     obs = sample_period * N;
-    s = np.zeros((lag + obs + 1, 2))
+    n = len(mu)
+    s = np.zeros((lag + obs + 1, n))
     
     args = (mu,M);
     s[0] = s0
     
     for i in range(lag + obs):
         soln = solve_ivp(fn,[0,dt],s[i],args=args)
-        eps = noise*np.random.randn(2)*np.random.binomial(1,dt/noise_T,size=2); # process noise/external perturbation = allow migration over time.
-        s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
-        s[i+1][np.where(s[i+1] < 0)] = 0;
+        eps = noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n); # process noise/external perturbation = allow migration over time.
+        # s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
+        # s[i+1][np.where(s[i+1] < 0)] = 0;
+        nxt = soln.y[:, -1] + eps
+        nxt[nxt<0] = 0 
+        s[i+1] = nxt
 
     x = s[lag:lag+obs:sample_period,]; 
-    for i in range(x.ndim):
-        x[:,i] += 0.001*np.random.randn(x[:,i].size) # measurement noise
+    for i in range(x.shape[1]):
+        x[:,i] += measurement_noise*np.random.randn(x[:,i].size) # measurement noise = 0.001 for my thesis
 
-    return [x[:,_] for _ in [0,1]] 
+    # return [x[:,_] for _ in [0,1]] # for 2 species
+    return x # for 4 species
+
+#%% Multiple species - hihger-order system
+# def interaction_matrix_M(n_species, mu=30.0, sigma=4.0, gamma=-0.5, rng=None):
+#     """
+#     Construct interaction matrix M.
+#     May's ecological stability theory. For a GLV or random large ecological network, if interaction coefficients scale like 1/sqrt(S), the system has well-defined stability threshold
+
+#     Parameters
+#     ----------
+#     n_species : int
+#         Number of species (S).
+#     mu : float
+#         Mean interaction parameter (unnormalised).
+#     sigma : float
+#         Std dev of interaction parameter (unnormalised).
+#     gamma : float
+#         Correlation between a_ij and a_ji.
+#     rng : np.random.Generator or None
+#         Random generator for reproducibility.
+
+#     Returns
+#     -------
+#     AA : (S, S) numpy array
+#         Interaction matrix.
+#     """
+#     if rng is None:
+#         rng = default_rng()
+
+#     A_mean = mu / n_species
+#     A_std  = sigma / np.sqrt(n_species)
+
+#     Mean  = np.array([A_mean, A_mean])
+#     Sigma = np.array([[A_std**2, gamma * A_std**2],
+#                       [gamma * A_std**2, A_std**2]])
+
+#     # sample S*S correlated pairs (a_ij, a_ji)
+#     R = rng.multivariate_normal(Mean, Sigma, size=(n_species * n_species))
+#     R1 = R[:, 0].reshape(n_species, n_species)
+#     R2 = R[:, 1].reshape(n_species, n_species)
+
+#     A1u = np.triu(R1, 1)        # upper triangle (excluding diag)
+#     A2u = np.triu(R2, 1)        # another upper triangle → used for lower
+
+#     AA  = A1u + A2u.T + np.eye(n_species)  # symmetric-ish + self = 1
+#     return AA
+
+# def initial_conditions_s0():
+#     return
+
+# def intrinsic_growth_vector_mu():
+#     return
+
 #%%%Drafts
 def vis_data(ts, titl = ""):
     fig, ax = plt.subplots(figsize = (10, 2.7))

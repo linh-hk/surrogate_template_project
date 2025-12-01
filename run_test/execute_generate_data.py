@@ -41,10 +41,12 @@ sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_depend
 from GenerateData import generate_lv
 from multiprocessor import Multiprocessor
 
-def save_data(filename, data, num_trials = 100):
-    if not os.path.exists(f'Simulated_data/LVextra/{filename}/'): 
-        os.makedirs(f'Simulated_data/LVextra/{filename}/')
-    with open(f'Simulated_data/LVextra/{filename}/data{num_trials}.pkl', 'wb') as fi:
+def save_data(filename, data, tag = '', foldername = 'LVextra'):
+    thispath = 'Simulated_data/'+ foldername + '/'
+    if not os.path.exists(thispath): 
+        os.makedirs(thispath)
+    filepath = thispath + 'data_' + filename + tag + '.pkl'
+    with open(filepath, 'wb') as fi:
         pickle.dump(data, fi)
         
 def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T):
@@ -56,7 +58,7 @@ if __name__ == '__main__':
     
     ARGs= []
     # EComp
-    ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
+    # ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     # ARGs.append({'mode': 'EComp', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     # ARGs.append({'mode': 'EComp', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05})
     # ARGs = {'mode': 'EComp', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05}
@@ -94,11 +96,53 @@ if __name__ == '__main__':
     # Pred-prey 
     # ARGs = {'mode': 'predprey', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([1.1,-0.4]), 'M': np.array([[0.0,-0.4],[0.1,0.0]]), 'noise': 0.01, 'noise_T': 0.05}
     
+    # Vano et al 4-species competitive model
+    r = np.array([1, 0.72, 1.53, 1.27])
+    A = np.array([[1,    1.09, 1.52, 0   ],
+                  [0,    1,    0.44, 1.36], 
+                  [2.33, 0,    1,    0.47], 
+                  [1.21, 0.51, 0.35, 1   ]])
+    mu = r.copy()
+    M = -A * np.expand_dims(r, 1) # M = -(r[:, None] * A)
+    s0_list = [np.array([0.1, 0.1, 0.1, 0.1]),
+               np.array([0.9, 0.1, 0.1, 0.1]), 
+               np.array([0.1, 0.9, 0.1, 0.1]), 
+               np.array([0.1, 0.1, 0.9, 0.1]), 
+               np.array([0.1, 0.1, 0.1, 0.9]), 
+               np.array([0.7, 0.7, 0.1, 0.1]), 
+               np.array([0.7, 0.1, 0.7, 0.1]), 
+               np.array([0.7, 0.1, 0.1, 0.7]), 
+               np.array([0.1, 0.7, 0.7, 0.1]), 
+               np.array([0.1, 0.7, 0.1, 0.7]), 
+               np.array([0.1, 0.1, 0.7, 0.7]), 
+               np.array([0.5, 0.5, 0.5, 0.5]),
+               np.array([0.3, 0.6, 0.2, 0.4]), 
+               np.array([0.6, 0.3, 0.4, 0.2]), 
+               np.array([0.2, 0.4, 0.6, 0.3]), 
+               np.array([0.4, 0.2, 0.3, 0.6])]
+    for s0 in s0_list: 
+        ARGs.append({'mode': 'Vano 4 species', 
+                 'dt_s': 0.25, 
+                 'N': 500, 
+                 's0': s0, 
+                 'mu': mu, 
+                 'M': M, 
+                 'noise': 0, 
+                 'noise_T': 0.05})
+        ARGs.append({'mode': 'Vano 4 species', 
+                 'dt_s': 0.25, 
+                 'N': 500, 
+                 's0': s0, 
+                 'mu': mu, 
+                 'M': M, 
+                 'noise': 0.01, 
+                 'noise_T': 0.05})
     
     
     start = time.time()
-    reps = 900 
+    reps = 20 
     for ARGS in ARGs:
+        trial_start_time = time.time()
         # Extract needed items in ARGS
         ARGS_ = (ARGS['dt_s'], ARGS['N'], ARGS['s0'], ARGS['mu'], ARGS['M'], ARGS['noise'], ARGS['noise_T'])
         
@@ -112,15 +156,16 @@ if __name__ == '__main__':
         # for i in range(reps):
         #     data.append(generate_lv(*ARGS_))
         
-        runtime = time.time() - start
-        filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
+        runtime = time.time() - trial_start_time
+        # filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
+        filename = '_'.join(['vano4species', ','.join([str(_) for _ in ARGS['s0']]), 'noise', str(ARGS['noise'])])
         savethis = {'data': data, 'datagen_params': ARGS, 'runtime': runtime}
-        save_data(filename, savethis, num_trials=reps)
+        save_data(filename, savethis, tag=str(reps), foldername = '4speciesglv')
         del ARGS_, data, savethis
 
-    # sys.stdout.flush();
-    # sys.stdout.write('Total time: %5.2f seconds\n' % (time.time() - start));
-    # sys.stdout.flush();
+    sys.stdout.flush();
+    sys.stdout.write('Total time: %5.2f seconds\n' % (time.time() - start));
+    sys.stdout.flush();
 
 
 # Make sure to state in the paper that the parameters are the same
