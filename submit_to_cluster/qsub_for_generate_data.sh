@@ -1,6 +1,6 @@
-#$ -l tmem=8G
-#$ -l h_vmem=8G
-#$ -l h_rt=06:00:00
+#$ -l tmem=64G
+#$ -l h_vmem=64G
+#$ -l h_rt=03:00:00
 #$ -pe smp 8
 #$ -R y
 
@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "generate_data_vano"
+#$ -N "generate_data_multispecies_symcomp"
 
 #$ -cwd
 
