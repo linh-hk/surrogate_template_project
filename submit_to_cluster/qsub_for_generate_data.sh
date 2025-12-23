@@ -1,6 +1,6 @@
-#$ -l tmem=2G
-#$ -l h_vmem=2G
-#$ -l h_rt=00:20:00
+#$ -l tmem=8G
+#$ -l h_vmem=8G
+#$ -l h_rt=06:00:00
 #$ -pe smp 8
 #$ -R y
 
@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "generate_data"
+#$ -N "generate_data_vano"
 
 #$ -cwd
 

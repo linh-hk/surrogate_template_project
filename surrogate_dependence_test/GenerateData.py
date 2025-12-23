@@ -180,52 +180,6 @@ def generate_discrete_FitzHugh_Nagumo(size, delta_t = 0.05):
     # return x[-N:,], w[-N:,]
     return x, w
     
-#%%% Chaotic Lotka Volterra
-def LV_function(t,y,r,a):
-    """
-    length is the number of observations/ length of series
-    r is an array of i length = innate 'growth' rate of i species
-    a is a matrix of ixi dimension = interaction between i species
-    """
-    lamda = np.subtract(1 , a@y ) # 4x4 * 4x1 = 4x1
-    np.array(lamda)
-    s_prime = 1.5*r*y*lamda
-    # print(f't = {t} \n y = {y.shape} \n r = {r} \n a = {a} \n lamda = {lamda} \n s_prime = {s_prime}')
-    return s_prime
-
-def generate_chaotic_lv(N, r, a, dt_s = 0.25): #, noise,noise_T):
-    # dt_s is time interval between observations
-    print("Generating Alex's chaotic Lotka-Volterra")
-    dt=0.05; # dt for formulas
-    sample_period = int(np.ceil(dt_s / dt)); # period in terms of number of observations
-    lag = int(150/dt); # observations in lag phase which will be remove
-    obs = sample_period * N ; # number of observations between periods * number of periods
-    s = np.zeros((lag + obs + 1, r.size)) # create 2 (r.size) series s of ... observations
-    s[0] = np.random.uniform(0.1, 0.5, size = r.size)
-    for t in range(lag + obs):
-        # t = 0
-        soln = sp.integrate.solve_ivp(LV_function,t_span= [0,dt],y0= s[t],args= (r, a))
-        # eps = noise*np.random.randn(2)*np.random.binomial(1,dt/noise_T,size=2);
-        # print(f'soln = {soln}')
-        s[t+1] = soln.y[:,-1] # + eps;
-        s[t+1][np.where(s[t+1] < 0)] = 0;
-
-    x = s[lag::sample_period,];
-    for i in range(x.ndim):
-        x[:,i] += 0.001*np.random.randn(x[:,i].size);
-    # plt.plot(x)
-    # x and y are independent realisation of s4 only so ...
-    return x[:,-1]
-ARGs = {'N': 100, 'r' : np.array([1, 0.72, 1.53, 1.27]),
-        'a' : np.array([[1, 1.09, 1.52, 0], 
-                        [0, 1, 0.44, 1.36], 
-                        [2.33, 0, 1, 0.47], 
-                        [1.21, 0.51, 0.35, 1]]),
-        'dt_s': 0.25}
-
-# LVuncut, LVcut = generate_lv(r,a,0.25,100)
-# test = generate_chaotic_lv(400, r, a, 0.25)
-
 #%%% Non stationary
 def generate_random_walk(length):
     print('Generating random walk')
@@ -348,7 +302,7 @@ def ar_control(noise=1.0):
       
     x = x[100:];
     return x
-#%%% Caroline LV
+#%%% Caroline gLV
 # Lotka Volterra
 def lotkaVolterra(t,y,mu,M):
     return y * (mu + M @ y);  
@@ -361,7 +315,7 @@ def lotkaVolterraSat(t,y,mu,M,K):
 def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra, measurement_noise = 0): # ,intx="competitive"
     print('Generating Caroline Lotka-Volterra model')
     dt=0.05; # integration step
-    lag = int(150/dt);
+    lag = int(250/dt) # int(150/dt) # 30000
     sample_period = int(np.ceil(dt_s / dt)); 
     obs = sample_period * N;
     n = len(mu)
@@ -376,67 +330,168 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra, measurem
         # s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
         # s[i+1][np.where(s[i+1] < 0)] = 0;
         nxt = soln.y[:, -1] + eps
-        nxt[nxt<0] = 0 
+        nxt[nxt<10e-8] = 0
+        # nxt[nxt<0] = 0 
         s[i+1] = nxt
 
     x = s[lag:lag+obs:sample_period,]; 
-    for i in range(x.shape[1]):
-        x[:,i] += measurement_noise*np.random.randn(x[:,i].size) # measurement noise = 0.001 for my thesis
+    x = x + measurement_noise * np.random.randn(*x.shape) # measurement noise = 0.001 for my thesis
 
     # return [x[:,_] for _ in [0,1]] # for 2 species
-    return x # for 4 species
+    return x # for multispecies
+    # return s # checking the dynamic
 
-#%% Multiple species - hihger-order system
-# def interaction_matrix_M(n_species, mu=30.0, sigma=4.0, gamma=-0.5, rng=None):
-#     """
-#     Construct interaction matrix M.
-#     May's ecological stability theory. For a GLV or random large ecological network, if interaction coefficients scale like 1/sqrt(S), the system has well-defined stability threshold
+#%% Vano 4-species strange attractor
+mu_vano = np.array([1, 0.72, 1.53, 1.27])
+M_vano = np.array([[1,    1.09, 1.52, 0   ],
+                   [0,    1,    0.44, 1.36], 
+                   [2.33, 0,    1,    0.47], 
+                   [1.21, 0.51, 0.35, 1   ]])
+'''
+    gLV form:
+        dy/dt = y ⊙ (mu + M y)
+    ----------
+    Vano form:
+        dy/dt = r ⊙ y ⊙ (1 - A y)
+        - mu = r
+        - M = −diag(r) · A
+    ----------
+    | Code              | What it does        | Mathematical meaning        |
+    |-------------------|---------------------|-----------------------------|
+    | r[:, None] * A    | Scales rows of A    | (r_i · A_ij)                |
+    | A * r             | Scales columns of A | (A_ij · r_j)                |
+    | np.diag(r) @ A    | Scales rows of A    | (r_i · A_ij)                |
+    | A @ np.diag(r)    | Scales columns of A | (A_ij · r_j)                |
+'''
+def scale_offdiag(A, s):
+    '''
+    A : is the interaction matrix M but in Vano annotation...
+    s : coupling-scaling bifurcation parameter
+    ----------
+    Ascaled : A_{ij} -> s*A_{ij} with i!=j
 
-#     Parameters
-#     ----------
-#     n_species : int
-#         Number of species (S).
-#     mu : float
-#         Mean interaction parameter (unnormalised).
-#     sigma : float
-#         Std dev of interaction parameter (unnormalised).
-#     gamma : float
-#         Correlation between a_ij and a_ji.
-#     rng : np.random.Generator or None
-#         Random generator for reproducibility.
+    '''
+    Ascaled = s * A.copy()
+    np.fill_diagonal(Ascaled, np.diag(A))
+    # D = np.diag(np.diag(A))
+    # return s * A + (1 - s) * D
+    return Ascaled
 
-#     Returns
-#     -------
-#     AA : (S, S) numpy array
-#         Interaction matrix.
-#     """
-#     if rng is None:
-#         rng = default_rng()
+def convertAvano2M(A, mu):
+    '''
+    M : interaction matrix
+    mu : base growth rate
+    '''
+    return -A * np.expand_dims(mu, 1) # M = -(r[:, None] * A)
+#%% Multiple species
+from numpy.random import default_rng
 
-#     A_mean = mu / n_species
-#     A_std  = sigma / np.sqrt(n_species)
+def initial_conditions_s0(S):
+    # S : number of species in community. Returns random s0 of size S
+    # in Polo codes, the makepool and makeplate contribute to this function
+    # in this study, I don't propagate the culture so I'm randomly generating initial condition
+    return np.random.uniform(0.0, 1.0, size=S)
 
-#     Mean  = np.array([A_mean, A_mean])
-#     Sigma = np.array([[A_std**2, gamma * A_std**2],
-#                       [gamma * A_std**2, A_std**2]])
+def intrinsic_growth_vector_mu(S):
+    # S : number of species in community. Returns vector of 1s with S entries
+    return np.ones(S)
 
-#     # sample S*S correlated pairs (a_ij, a_ji)
-#     R = rng.multivariate_normal(Mean, Sigma, size=(n_species * n_species))
-#     R1 = R[:, 0].reshape(n_species, n_species)
-#     R2 = R[:, 1].reshape(n_species, n_species)
+##### Polo Matlab extracted ver - May's work
+'''
+    Construct interaction matrix M.
+    May's ecological stability theory. For a GLV or random large ecological network, if interaction coefficients scale like 1/sqrt(S), the system has well-defined stability threshold
+    ----------
+    Idea of May:
+        - Simple question: what happens to stability when a system gets large and complex?
+        - He considered: S species, random interactions, no structure, asked when equilibria are typically stable
+    ----------
+    Why scale by squrt(S)?
+        - If naively draw A_{ij} ~ Normal(mu, sigma^2)
+        Sum(A_{ij}Nj) would grow as S increases, the dynamics blows up
+        - So May introduced scaling purely for mathematical reasons
+            sigma_eff = sigma/squrt(S)
+        - These parameters existed because May was studying random matrix spectra, not ecological realism
+    ----------
+        dy/dt = y ⊙ (K - y - Ay) = y ⊙ (K-(I+A)y)
+    Normalised logistic form of gLV
+        dy/dt = y ⊙ (1 - (I+A) @ y)
+        - A_{ij} with i!=j, the diagonal has been taken out as -y = -Iy
+        - mu = K = 1 (intrinsic_growth_vector_mu())
+'''
+def im_may_M(S, meanmu=30.0, sigma=4.0, gamma=-0.5, rng=None):
+    """
+    ----------
+    S : int, number of species (S).
+    meanmu : float, mean interaction parameter (unnormalised).
+    sigma : float, std dev of interaction parameter (unnormalised).
+    gamma : float, correlation between a_ij and a_ji.
+    rng : np.random.Generator or None, Random generator for reproducibility.
+    -------
+    M : (S, S) numpy array, NEGATED Interaction matrix A.
+    """
+    rng = default_rng() if rng is None else rng
 
-#     A1u = np.triu(R1, 1)        # upper triangle (excluding diag)
-#     A2u = np.triu(R2, 1)        # another upper triangle → used for lower
+    mean_scaled = meanmu / S
+    std_scaled  = sigma / np.sqrt(S)
 
-#     AA  = A1u + A2u.T + np.eye(n_species)  # symmetric-ish + self = 1
-#     return AA
+    Mean  = np.array([mean_scaled, mean_scaled])
+    Sigma = np.array([[std_scaled**2, gamma * std_scaled**2],
+                      [gamma * std_scaled**2, std_scaled**2]])
 
-# def initial_conditions_s0():
-#     return
+    # sample S*S correlated pairs (a_ij, a_ji)
+    R = rng.multivariate_normal(Mean, Sigma, size=(S * S))
+    R1 = R[:, 0].reshape(S, S)
+    R2 = R[:, 1].reshape(S, S)
 
-# def intrinsic_growth_vector_mu():
-#     return
+    A1u = np.triu(R1, 1)        # upper triangle (excluding diag)
+    A2u = np.triu(R2, 1)        # another upper triangle → used for lower
 
+    A  = A1u + A2u.T + np.eye(S)  # symmetric-ish + self = 1
+    return -A
+
+##### Akshit multistability
+'''
+    + symmetric matrix can not lead to chaos.
+    + https://arxiv.org/pdf/2511.06697
+    + how easy it is to know the threshold for stochasticity?
+    + Akshit says noone knows that so we have to tune the schochasticity in slowly
+    + non zeros entries will create the same outcome as discussed
+    + what we observed from the 50 species seed(0) is chaos
+    ----------
+        dy/dt = y ⊙ (K - y - Ay) = y ⊙ (K-(I+A)y)
+    The paper consider strong interaction regime: both meanmu and sigma are finite constants that do not scale with S number of species
+        - contrast to May's scaling
+        - fix K_i = 1
+        - boundary for multistability
+            sigma = frac{-mu+1}{squrt{2S}}
+    ----------
+    Multistability boundary
+        \sigma=\frac{1-\mu}{\squrt{2S}}
+'''
+def im_symmetric_M(S, meanmu=0.5, sigma=0.3, rng=None):
+    """
+    S : int, number of species (S).
+    meanmu : float, positive, mean interaction parameter (unnormalised).
+    sigma : float, positive, std dev of interaction parameter (unnormalised).
+    rng : np.random.Generator or None, Random generator for reproducibility.
+    -------
+    M : (S, S) numpy array, NEGATED Interaction matrix A.
+    """
+    rng = default_rng() if rng is None else rng
+    A = rng.normal(loc=meanmu, scale=sigma, size=(S,S))
+    while np.any(A == 0.0):
+        loc = (A == 0.0)
+        A[loc] = rng.normal(loc=meanmu, scale=sigma, size=loc.sum())
+    A = 0.5 * (A + A.T)
+    np.fill_diagonal(A, 1.0)
+    return -A
+
+def multistability_crit(meanmu, S):
+    """
+    Patro et al. (Eq. 2): multistability boundary for symmetric random GLV.
+        sigma_c = (1 - mu) / sqrt(2S)
+    """
+    return(1-meanmu)/np.sqrt(2.0*S)
 #%%%Drafts
 def vis_data(ts, titl = ""):
     fig, ax = plt.subplots(figsize = (10, 2.7))
@@ -446,16 +501,16 @@ def vis_data(ts, titl = ""):
 
 #%% Run
 if __name__=="__main__":
-    
-    N=500;
-    noise=0.05*0.5;
-    noise_T=0.05;
-    dt_s=0.25;
-    intx="competitive";
+    datagen_params = {'mode': "competitive",
+                      'dt_s': 0.25, 
+                      'N': 500,
+                      's0': s0, 
+                      'noise_T': 0.05,
+                      'noise': 0.05*0.5}
     reps = 1;
     ts_ar = ar_control()
-    ts_lv = generate_lv(run_id = 1, dt_s = dt_s, N=N, noise=noise,noise_T=noise_T,intx="competitive")
-    ts_ch = generate_niehaus(run_id=1, dt_s=dt_s, N=N, noise=noise, noise_T=noise_T, intx="competitive")
+    ts_lv = generate_lv(run_id = 1, dt_s = datagen_params['dt_s'], N=datagen_params['N'], noise=datagen_params['noise'],noise_T=datagen_params['noise_T'],intx="competitive")
+    ts_ch = generate_niehaus(run_id=1, dt_s=datagen_params['dt_s'], N=datagen_params['N'], noise=datagen_params['noise'], noise_T=datagen_params['noise_T'], intx=datagen_params['mode'])
     # func=generate_niehaus
     # Draw separately
     for x in ['ts_lv', 'ts_ch']:
@@ -479,4 +534,110 @@ if __name__=="__main__":
             axes[i].plot(draw_this[:,series])
     for ax in axes.flat:
         ax.set(xlabel='time(t)', ylabel='Values')
+        
+    #%% Testing Vano and s = 1.06875
+    s = 1.06875
+    mu = mu_vano.copy()
+    Ascaled = scale_offdiag(M_vano, s) 
+    M = convertAvano2M(Ascaled, mu) 
+    datagen_params = {'mode': "vano_s",
+                      's': s,
+                      'dt_s': 0.25, 
+                      'N': 500,
+  #                   'noise': 0.001,
+                      'noise_T': 0.05,
+                      'mu': mu,
+                      'M': M}
+    s0_list = (np.array([0.1, 0.1, 0.1, 0.1]),
+               np.array([0.9, 0.1, 0.1, 0.1]), 
+               np.array([0.1, 0.9, 0.1, 0.1]), 
+               np.array([0.1, 0.1, 0.9, 0.1]), 
+               np.array([0.1, 0.1, 0.1, 0.9]), 
+               np.array([0.7, 0.7, 0.1, 0.1]), 
+               np.array([0.7, 0.1, 0.7, 0.1]), 
+               np.array([0.7, 0.1, 0.1, 0.7]), 
+               np.array([0.1, 0.7, 0.7, 0.1]), 
+               np.array([0.1, 0.7, 0.1, 0.7]), 
+               np.array([0.1, 0.1, 0.7, 0.7]), 
+               np.array([0.5, 0.5, 0.5, 0.5]),
+               np.array([0.3, 0.6, 0.2, 0.4]), 
+               np.array([0.6, 0.3, 0.4, 0.2]), 
+               np.array([0.2, 0.4, 0.6, 0.3]), 
+               np.array([0.4, 0.2, 0.3, 0.6]))
+    data = {'data': [],
+            'data_noise': [],
+            's0': s0_list}
+    for s0 in s0_list:  
+        data['data'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=datagen_params['mu'], M=datagen_params['M'], noise=0, noise_T=datagen_params['noise_T']))
+        data['data_noise'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=datagen_params['mu'], M=datagen_params['M'], noise=0.001, noise_T=datagen_params['noise_T']))
+        
+    # datagen_params = {'mode': 'Vano 4 species',
+    #                   'dt_s': 0.25,
+    #                   'N': 500,
+    #                   's0': s0_list,
+    #                   'mu': mu,
+    #                   'M': M,
+    #                   'noise': 0.001,
+    #                   'noise_T': 0.05}
+    data['datagen_params'] = datagen_params
+    del s, mu, Ascaled, M, s0, s0_list
     
+    #%% Polo matlab model    
+    np.random.seed(0) 
+    noise = 0.001
+    n_species = 50
+    M = im_may_M(n_species)
+    mu = intrinsic_growth_vector_mu(n_species)
+    datagen_params = {'mode': "multispecies_may",
+                      'dt_s': 0.25, 
+                      'N': 500,
+                      'noise_T': 0.05,
+                      'n_species': n_species,
+                      'noise': noise,
+                      'mu': mu,
+                      'M': M}
+    data = {'data': [], 
+            'data_noise': [],
+            's0' : []}
+    for i in range(5):
+        s0 = initial_conditions_s0(n_species)
+        data['s0'].append(s0)
+        data['data'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=mu, M=M, noise=0.0, noise_T=datagen_params['noise_T']))
+        data['data_noise'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=mu, M=M, noise=noise, noise_T=datagen_params['noise_T']))
+    data['datagen_params'] = datagen_params
+    del noise, n_species, M, mu, s0, i
+        
+    #%% Akshit model - akshit_50
+    np.random.seed(0)
+    noise = 0.005
+    n_species = 50
+    mu = intrinsic_growth_vector_mu(n_species)
+    meanmu = 0.5
+    sigma_crit = multistability_crit(meanmu, n_species) # 0.05
+    sigma = 0.3
+    # M = im_symmetric_M(S=n_species, meanmu=meanmu, sigma=sigma)
+    datagen_params = {'mode': "multispecies_akshit",
+                      'dt_s': 0.25, 
+                      'N': 500,
+                      'noise_T': 0.05,
+                      'n_species': n_species,
+                      'noise': noise,
+                      'mu': mu,
+                      # 'meanmu': meanmu,
+                      # 'sigma': sigma,
+                      'M': M}
+    # datagen_params = akshit_50['datagen_params']
+    data = {'data': [], 
+            'data_noise': [],
+            's0' : []}
+    # for i in [0,2,3]:
+    #     data['s0'].append(akshit_50['s0'][i])
+    for s0 in data['s0']:
+        for i in range(3):
+            # s0 = initial_conditions_s0(datagen_params['n_species'])
+            # data['s0'].append(s0)
+            data['data'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=datagen_params['mu'], M=datagen_params['M'], noise=0.0, noise_T=datagen_params['noise_T']))
+            data['data_noise'].append(generate_lv(dt_s=datagen_params['dt_s'], N=datagen_params['N'], s0=s0, mu=datagen_params['mu'], M=datagen_params['M'], noise=noise, noise_T=datagen_params['noise_T']))
+    data['datagen_params'] = datagen_params
+    del noise, n_species, mu, meanmu, sigma_crit, sigma, M, s0, i
+    # akshit_50[0,2,3]
