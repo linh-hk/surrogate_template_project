@@ -5,34 +5,41 @@ Created on Mon May 29 18:15:37 2023
 
 @author: h_k_linh
 
-qsub    ...             {cor_stat}      {surr_proc}     {data_name}     {input_}    {N_0}           
+Run surrogate dependence tests on simulated time-series batches on SGE.
+
+Qsub passes args to python:
+
+qsub    ...             {cor_stat}      {surr_proc}     {folder_name}     {file_name}    {N_0}           
 qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]
 
-for cor_stat, the arguments is an array of the test's initials:
-    + 'a': all
-    + 'p': pearson
-    + 'l': lsa
-    + 'm': mutual_info
-    + 'c' ['ccm_y->x', 'ccm_x->y']
-    + 'g': ['granger_y->x', 'granger_x->y']
-    
-    E.g.: 'a', 'plm', 'cg', 'lg', 'mc', etc.
+Arguments:
+    cor_stat: string of statistic initials
+        a = all
+        p = pearson
+        l = lsa
+        m = mutual_info
+        c = ccm (both directions)
+        g = granger (both directions)
+        Examples: "a", "plm", "cg", "lg"
 
-This script is submited to SGE on UCL cluster as a task. 
-What it does is:
-    Load simulated data that is in ../Simulated_data
-        Which data to load is using the first argument passed from qsub script.
-        The second argument from the qsub script specifies which pairs of time series (index of simulated data) will be run. This came about because I simulated 1000 simulations in total and only want to run test on 100 simulations per run.
-    Run the dependence test on the data in parallel and save results on cluster.
+    surr_proc: string of surrogate test initials
+        a = all ("tts_naive", "twin", "randphase")
+        n = tts_naive
+        w = twin
+        r = randphase
+        Examples: "a", "nr", "w"
+
+    folder_name: folder under Simulated_data/ (or Simulated_data/LVextra/)
+    file_name:   base filename (without .pkl)
+    N0:          start index into the stored list of simulations
+
+This script runs on SGE on UCL cluster:
+    Load simulated data that is in ../Simulated_data(/LVextra)/folder_name/file_name        
+    Run the dependence test on the data in parallel (multiprocessor rather than MPI4py) and save results on cluster.
 Note:
-This script particularly use the randomphase protocol to general surrogate test
-The imported data is changed to test for false positive rate in this script
-Integrated multiprocessor into the workflow ('new' in file name)
-This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
 
 """
 import os
-print(f'working directory: {os.getcwd()}')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test')
 # os.getcwd()
 
@@ -50,8 +57,8 @@ import pickle # load and save data
 # from mpi4py.futures import MPIPoolExecutor
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
-#%%
-def sparse_corstat(sys_arg):    
+#%% Argument parsing helpers
+def parse_corstat(sys_arg):    
     if 'a' in sys_arg:
         return ['pearson', 'lsa', 'mutual_info', 'ccm_y->x', 'ccm_x->y', 'granger_y->x', 'granger_x->y']
     else:
@@ -63,17 +70,31 @@ def sparse_corstat(sys_arg):
         if 'm' in sys_arg:
             stats_list.append('mutual_info')
         if 'c' in sys_arg:
-            stats_list.extend(['ccm_y->x', 'ccm_x->y'])
+            stats_list += ['ccm_y->x', 'ccm_x->y']
         if 'g' in sys_arg:
-            stats_list.extend(['granger_y->x', 'granger_x->y'])
+            stats_list += ['granger_y->x', 'granger_x->y']
         return stats_list
-        
-def load_data(data_name, input_ = 'data'):
-    if 'xy_' in data_name:
-        sampdir = f'Simulated_data/{data_name}'
-    elif '500' in data_name:
-        sampdir = f'Simulated_data/LVextra/{data_name}'
-    with open(f'{sampdir}/{input_}.pkl', 'rb') as fi:
+    
+def parse_testlist(sys_arg):
+    if 'a' in sys_arg:
+        return ['tts_naive', 'twin','randphase'] # 
+    else: 
+        test_list = []
+        if 'n' in sys_arg:
+            test_list.append('tts_naive')
+        if 'w' in sys_arg:
+            test_list.append('twin')
+        if 'r' in sys_arg:
+            test_list.append('randphase')
+        return test_list
+
+def get_sample_dir(folder_name):
+    base = "Simulated_data/LVextra" if "500" in folder_name else "Simulated_data"
+    return f"{base}/{folder_name}"
+    
+def load_data(folder_name, file_name = 'data'):
+    sampdir = get_sample_dir(folder_name=folder_name)
+    with open(f'{sampdir}/{file_name}.pkl', 'rb') as fi:
         data = pickle.load(fi)
     return data['data'], data['datagen_params']
     # for false pos
@@ -81,43 +102,63 @@ def load_data(data_name, input_ = 'data'):
     # data_fp = [[data['data'][_][0], data['data'][0 if _ == num_trials - 1 else _+1][1]] 
     #           for _ in range(num_trials)]
     # return data_fp, data['datagen_params']
+    
+def choose_pairs(X, first_S, second_S):
+    return X[:,first_S], X[:, second_S]
 
-def run_each_ts(pair, pair_id, stats_list, test_list, maxlag, nsurr):
-    x = pair[0]
-    y = pair[1]
+def name_output(choose_name, cor_stat_arg='a', test_list_arg='a', maxlag=0, note=''):
+    parts = [choose_name]
+    if note:
+        parts.append(note)
+    parts += [cor_stat_arg, test_list_arg, "maxlag", str(maxlag)]
+    return "_".join(parts) + ".pkl"
+
+def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr, first_S=0, second_S=1):
+    x, y = choose_pairs(series, first_S=first_S, second_S=second_S)
     # manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={})
-    return {pair_id: sdt.manystats_manysurr(x, y, stats_list, test_list, maxlag=maxlag, n_surr=nsurr),
+    res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr)
+    return {series_id: res,
             'XY': np.array([x,y])}
-
-def name_output(data_name, which_data, cor_stat_arg, test_list, N_0):
-    if '500' in data_name and which_data == '':
-        return '_'.join(test_list+['nolag']) if 'a' in cor_stat_arg else '_'.join([cor_stat_arg] + test_list+['nolag']) #, str(N_0)
-    else:
-        return '_'.join(test_list+['nolag', str(N_0)]) if 'a' in cor_stat_arg else '_'.join([cor_stat_arg] + test_list+['nolag', str(N_0)])#
         
 if __name__=="__main__":
-    stats_list = sparse_corstat(sys.argv[1])        
-    test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
+    
+    # test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
+    print(f'working directory: {os.getcwd()}')
+    if len(sys.argv) != 6:
+        raise SystemExit(
+            "Expected 5 arguments: cor_stat surr_proc folder_name file_name N0\n"
+            "Example: qsub execute_run_tests.py plm nr myfolder data_foo 0"
+        )
+    stats_list = parse_corstat(sys.argv[1])  
+    test_list = parse_testlist(sys.argv[2])
+    folder_name = sys.argv[3]
+    file_name = sys.argv[4]
+    N0 = int(sys.argv[5])
+    
+    # Defaults
     maxlag = 0
     nsurr = 99
+    batch_N = 1000
     
-    data_name = sys.argv[3]
-    input_ = sys.argv[4]
-    N_0 = int(sys.argv[5])
-    N = 100
-    print(f"Running {data_name} sample, {input_}.pkl {N_0} to {N_0 + N} at {time.time()}, with {' '.join(test_list)} + {' '.join(stats_list)}, truepos")
-    data, datagen_param = load_data(data_name, input_)
+    # Local set
+    first_S= 35 # for s0_2
+    second_S= 39 # for s0_2
     
-    print(f'Sequencing number {N_0} to {N_0 + N}')
-    data = data[N_0 : N_0 + N]
-    # ARGs = []
+    data, datagen_params = load_data(folder_name, file_name)
+    data = data[N0 : N0 + batch_N]
+    
+    print(
+        f"Running: folder={folder_name}, file={file_name}.pkl, "
+        f"range=[{N0}:{N0 + batch_N}), "
+        f"tests={test_list}, stats={stats_list}, nsurr={nsurr}, maxlag={maxlag}"
+    )
     resultsList = []
     start = time.time()
     for series in enumerate(data):
-        ARGs = (series[1], N_0+series[0],stats_list, test_list, maxlag, nsurr)
+        ARGs = (series[1], N0 + series[0],stats_list, test_list, maxlag, nsurr, first_S, second_S)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
-        print(f'Series #{series[0]} run in {time.time()-start}')
+    
     # with MPIPoolExecutor() as executor:
     #     resultsIter = executor.map(run_each_ts, ARGs, unordered=True)
     #     resultsList = [_ for _ in resultsIter]
@@ -126,11 +167,12 @@ if __name__=="__main__":
              'stats_list' : stats_list,
              'test_list' : test_list,
              'nsurr' : nsurr,
-             'maxlag': maxlag}
+             'maxlag': maxlag,
+             'species_pair': (first_S, second_S)}
     
-    out_name = name_output(data_name, input_, sys.argv[1], test_list, N_0)
+    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag)
     
-    fiS = f"Simulated_data/{data_name}/{out_name}.pkl" if 'xy_' in data_name else f'Simulated_data/LVextra/{data_name}/{out_name}.pkl'
+    fiS = f'{get_sample_dir(folder_name)}/{out_name}'
     print(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);

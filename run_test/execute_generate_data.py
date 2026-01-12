@@ -143,17 +143,27 @@ if __name__ == '__main__':
     n_species = 50
     mu = intrinsic_growth_vector_mu(n_species)
     M = np.load('multispecies_parameters/matrix.npy')
-    for i in [0,2,3]:
-        s0 = np.load(file=f'multispecies_parameters/s0_{i}.npy')
-        ARGs.append({'mode': f'multispecies_symmetrical_competition_s0_{i}', 
-                     'n_species': n_species,
-                     'dt_s': 0.25, 
-                     'N': 500,
-                     's0': s0,
-                     'mu': mu,
-                     'M': M,
-                     'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
-                     'noise_T': 0.05})
+    # for i in [0,2,3]:
+    #     s0 = np.load(file=f'multispecies_parameters/s0_{i}.npy')
+    #     ARGs.append({'mode': f'multispecies_symmetrical_competition_s0_{i}', 
+    #                  'n_species': n_species,
+    #                  'dt_s': 0.25, 
+    #                  'N': 500,
+    #                  's0': s0,
+    #                  'mu': mu,
+    #                  'M': M,
+    #                  'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+    #                  'noise_T': 0.05})
+    s0 = np.load(file='multispecies_parameters/s0_1.npy')
+    ARGs.append({'mode': 'multispecies_symmetrical_competition_s0_1', 
+                 'n_species': n_species,
+                 'dt_s': 0.25, 
+                 'N': 500,
+                 's0': s0,
+                 'mu': mu,
+                 'M': M,
+                 'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+                 'noise_T': 0.05})
     start = time.time()
     reps = 1000
     for ARGS in ARGs:

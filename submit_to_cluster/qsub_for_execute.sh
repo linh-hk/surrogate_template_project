@@ -1,5 +1,5 @@
-#$ -l tmem=2G
-#$ -l h_vmem=2G
+#$ -l tmem=64G
+#$ -l h_vmem=64G
 #$ -l h_rt=06:00:00
 #$ -pe smp 8
 #$ -R y
@@ -8,7 +8,7 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "nolag99"
+#$ -N "multispecies_s2_nolag99"
 
 #$ -cwd
 
