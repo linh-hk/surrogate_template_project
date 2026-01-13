@@ -54,6 +54,12 @@ import time
 # import dill # load and save data
 import pickle # load and save data
 
+from statsmodels.tsa.stattools import adfuller, kpss
+
+import warnings
+from statsmodels.tools.sm_exceptions import InterpolationWarning
+warnings.filterwarnings("ignore", category=InterpolationWarning)
+
 # from mpi4py.futures import MPIPoolExecutor
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
@@ -103,9 +109,6 @@ def load_data(folder_name, file_name = 'data'):
     #           for _ in range(num_trials)]
     # return data_fp, data['datagen_params']
     
-def choose_pairs(X, first_S, second_S):
-    return X[:,first_S], X[:, second_S]
-
 def name_output(choose_name, cor_stat_arg='a', test_list_arg='a', maxlag=0, note=''):
     parts = [choose_name]
     if note:
@@ -113,12 +116,100 @@ def name_output(choose_name, cor_stat_arg='a', test_list_arg='a', maxlag=0, note
     parts += [cor_stat_arg, test_list_arg, "maxlag", str(maxlag)]
     return "_".join(parts) + ".pkl"
 
-def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr, first_S=0, second_S=1):
-    x, y = choose_pairs(series, first_S=first_S, second_S=second_S)
+#%% Execution
+def adf_p(x, regression="c", autolag="AIC", maxlag=None):
+    x = np.asarray(x, dtype=float)
+    return adfuller(x, regression=regression, autolag=autolag, maxlag=maxlag)[1]
+
+def kpss_p(x, regression="c", nlags="auto"):
+    x = np.asarray(x, dtype=float)
+    return kpss(x, regression=regression, nlags=nlags)[1]
+
+def stationary_evaluate(X, alpha=0.05, regression="c", 
+                        autolag="AIC", maxlag=None, 
+                        nlags="auto"):
+    """
+    X: (T,S)
+    Returns boolean mask (S,) for species that are stationary over the whole window:
+      ADF p < alpha  AND  KPSS p > alpha
+    """
+    X = np.asarray(X, dtype=float)
+    S = X.shape[1]
+    mask = np.zeros(S, dtype=bool)
+
+    for s in range(S):
+        x = X[:, s]
+        p_adf = adf_p(x, regression=regression, autolag=autolag, maxlag=maxlag)
+        p_kpss = kpss_p(x, regression=regression, nlags=nlags)
+        mask[s] = (p_adf < alpha) and (p_kpss > alpha)
+
+    return mask
+
+def choose_pair(trial, alpha=0.05, top_k=2, value="mean", abs_value=False,
+                regression="c", autolag="AIC", maxlag=None, nlags="auto"):
+    """
+    Filters by stationarity over the full window using:
+      ADF p < alpha AND KPSS p > alpha
+
+    Returns:
+      pair_ts   : (T,2) array
+      pair_idx  : (s1,s2) original species indices
+      stationary: array of stationary species indices (for trace/debug)
+    """
+    mask = stationary_evaluate(
+        trial, alpha=alpha, regression=regression, autolag=autolag,
+        maxlag=maxlag, nlags=nlags
+    )
+    stationary = np.where(mask)[0]
+    if stationary.size < 2:
+        return None, (-1, -1), stationary
+
+    # value to rank (not returned)
+    if value == "median":
+        vals = np.median(trial, axis=0)
+    else:
+        vals = np.mean(trial, axis=0)
+
+    key = np.abs(vals[stationary]) if abs_value else vals[stationary]
+    order = stationary[np.argsort(key)[::-1]]
+
+    s1 = int(order[0])
+    s2 = int(order[min(top_k - 1, order.size - 1)])
+
+    pair_ts = trial[:, [s1, s2]]
+    return pair_ts, (s1, s2), stationary
+
+def refine_run_data(data, N0,
+                    alpha=0.05, top_k=2, value="mean", abs_value=False):
+    pairs = []
+    series_ids = []
+    species_id = []
+    stationary_idx = []
+
+    for i, trial in enumerate(data):
+        pair, (s1, s2), stationarity_ = choose_pair(trial, alpha=alpha, top_k=top_k, value=value, abs_value=abs_value)
+        if pair is None:
+            continue
+        pairs.append((pair, N0+i)) 
+        series_ids.append(N0+i)
+        species_id.append((s1, s2))
+        stationary_idx.append(stationarity_)
+
+    meta = {"series_ids": series_ids, "species_id": species_id, "stationary_idx": stationary_idx}
+
+    return pairs, meta
+
+# test, test_meta = refine_run_data(data['data'][:100], N0=0, top_k=2)
+# for series in test:
+#     plot_timeseries_all_species(series[0], title = "top2 both")
+# pick top 2 because after looking, it seems that most of them are close to 0 after filtered
+
+def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr):
+    x = series[:, 0]
+    y = series[:, 1]
     # manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={})
     res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr)
-    return {series_id: res,
-            'XY': np.array([x,y])}
+    return {series_id: res}
         
 if __name__=="__main__":
     
@@ -140,13 +231,16 @@ if __name__=="__main__":
     nsurr = 99
     batch_N = 1000
     
-    # Local set
-    first_S= 35 # for s0_2
-    second_S= 39 # for s0_2
-    
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
     
+    # Pair-selection / stationarity settings (single source of truth)
+    alpha = 0.05
+    top_k = 2
+    value = "mean"
+    abs_value = False
+    data, meta = refine_run_data(data=data, N0=N0,
+                                 alpha=alpha, top_k=top_k, value=value, abs_value=abs_value)
     print(
         f"Running: folder={folder_name}, file={file_name}.pkl, "
         f"range=[{N0}:{N0 + batch_N}), "
@@ -154,21 +248,36 @@ if __name__=="__main__":
     )
     resultsList = []
     start = time.time()
-    for series in enumerate(data):
-        ARGs = (series[1], N0 + series[0],stats_list, test_list, maxlag, nsurr, first_S, second_S)
+    for series, series_id in data:
+        ARGs = (series, series_id,stats_list, test_list, maxlag, nsurr)
         # print(ARGs)
         resultsList.append(run_each_ts(*ARGs))
     
     # with MPIPoolExecutor() as executor:
     #     resultsIter = executor.map(run_each_ts, ARGs, unordered=True)
     #     resultsList = [_ for _ in resultsIter]
-    
+    test_config = { "stationarity_filter": { "method": "ADF+KPSS",
+                                            "alpha": alpha,
+                                            "regression": "c",
+                                            "autolag": "AIC",
+                                            "nlags": "auto"
+                                            },
+                   "pair_selection": { "top_k": top_k,
+                                      "value": value,
+                                      "abs_value": abs_value,
+                                      },
+                   "surrogate_test": { "stats_list": stats_list,
+                                      "test_list": test_list,
+                                      "nsurr": nsurr,
+                                      "maxlag": maxlag
+                                      },
+                   "batch": { "N0": N0,
+                             "batch_N": batch_N
+                             }
+                   }
     saveP = {'pvals' : resultsList,
-             'stats_list' : stats_list,
-             'test_list' : test_list,
-             'nsurr' : nsurr,
-             'maxlag': maxlag,
-             'species_pair': (first_S, second_S)}
+             'test_config': test_config,
+             'data_meta': meta}
     
     out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag)
     
