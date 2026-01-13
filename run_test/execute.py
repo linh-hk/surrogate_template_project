@@ -63,6 +63,15 @@ warnings.filterwarnings("ignore", category=InterpolationWarning)
 # from mpi4py.futures import MPIPoolExecutor
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
+#%%
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+OUTER_WORKERS = 4
+
+# inner budget per pair (must sum <= 4-ish; these are “caps”)
+NPROC_SCAN  = 1
+NPROC_CCM   = 4
+NPROC_EMBED = 1
 #%% Argument parsing helpers
 def parse_corstat(sys_arg):    
     if 'a' in sys_arg:
@@ -204,11 +213,13 @@ def refine_run_data(data, N0,
 #     plot_timeseries_all_species(series[0], title = "top2 both")
 # pick top 2 because after looking, it seems that most of them are close to 0 after filtered
 
-def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr):
+def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr,
+                nproc_scan=2, nproc_ccm=2, nproc_embed=1):
     x = series[:, 0]
     y = series[:, 1]
     # manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={})
-    res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr)
+    res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr,
+                                 nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
     return {series_id: res}
         
 if __name__=="__main__":
@@ -248,10 +259,20 @@ if __name__=="__main__":
     )
     resultsList = []
     start = time.time()
-    for series, series_id in data:
-        ARGs = (series, series_id,stats_list, test_list, maxlag, nsurr)
-        # print(ARGs)
-        resultsList.append(run_each_ts(*ARGs))
+    
+    with ThreadPoolExecutor(max_workers=OUTER_WORKERS) as ex:
+        futs = []
+        for series, series_id in data:
+            futs.append(ex.submit(run_each_ts,
+                                  series, series_id, stats_list, test_list, maxlag, nsurr,
+                                  NPROC_SCAN, NPROC_CCM, NPROC_EMBED))
+        for fut in as_completed(futs):
+            resultsList.append(fut.result())
+    
+    # for series, series_id in data:
+    #     ARGs = (series, series_id,stats_list, test_list, maxlag, nsurr)
+    #     # print(ARGs)
+    #     resultsList.append(run_each_ts(*ARGs))
     
     # with MPIPoolExecutor() as executor:
     #     resultsIter = executor.map(run_each_ts, ARGs, unordered=True)

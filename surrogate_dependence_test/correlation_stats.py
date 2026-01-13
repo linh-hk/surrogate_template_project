@@ -21,7 +21,7 @@ from sklearn.feature_selection import mutual_info_regression # for mutual inform
 
 #%%% Correlation Statistics
     #%%%% Pearson correlations
-def correlation_Pearson(x, y):
+def correlation_Pearson(x, y, **kwargs):
     print("\t\t\t\t\t\tpearson correlation coefficients")
     M = np.zeros([x.size, y.shape[1] + 1])
     M[:,0] = x
@@ -78,7 +78,7 @@ def lsa_new(x,y_array):
     sign = np.sign(score_P - score_N)
     return np.max([score_P, score_N], axis=0) * sign
 
-def lsa_new_delay(x,y_arr,D=3):
+def lsa_new_delay(x,y_arr,D=3, **kwargs):
     print("\t\t\t\t\t\tlocal similarity analysis")
     # y_array should be (replicates,timepoints)
     n = x.size
@@ -114,7 +114,7 @@ def lsa_new_delay(x,y_arr,D=3):
     if P(X,Y) == P(X)*P(Y) <=> X,Y no relation <=> P1/P2 = 1
     log( 1 ) = 0 => X and Y are independent.    
     """
-def mutual_info(x,y):
+def mutual_info(x,y, **kwargs):
     print("\t\t\t\t\t\tmutual information")
     return mutual_info_regression(y, x, n_neighbors=3).flatten()
 

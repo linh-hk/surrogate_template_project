@@ -295,7 +295,8 @@ def iter_scanlag(i, statistic, x, y, kw_statistic):
     return [i, dill.loads(statistic)(x,y,**kw_statistic)]
     # statistic(x[:-2*i],y[2*i:],**kw_statistic)
     
-def scan_lags(x,y,statistic,maxlag=5,steplag=1, kw_statistic={}):
+def scan_lags(x,y,statistic,maxlag=5,steplag=1, kw_statistic={},
+              nproc_scan=2):
     print(f"\t\t\t\t\tScanning best lags with step lags = {steplag}")
 
     score_sim = statistic(x,y,**kw_statistic);
@@ -315,7 +316,7 @@ def scan_lags(x,y,statistic,maxlag=5,steplag=1, kw_statistic={}):
             mp.add(iter_scanlag, ARGs)
             ARGs = (maxlag-i, fun, x[:-steplag*i],y[steplag*i:], kw_statistic)
             mp.add(iter_scanlag, ARGs)
-        mp.run(2) 
+        mp.run(nproc_scan) # 2
         rets = mp.results()
         for idx, val in rets:
             score[:, idx] = np.array(val)
@@ -358,10 +359,10 @@ def create_surr(x, y, surrmeth, n_surr, kw_randphase, kw_twin, r_tts):
     
     return xstar, ystar, surr, test_params
 
-def sig_test_good(xstar, ystar, surr, statistic, maxlag, steplag, shorter=False, kw_statistic = {}):     
+def sig_test_good(xstar, ystar, surr, statistic, maxlag, steplag, shorter=False, kw_statistic = {}, nproc_scan=2):     
     #find statistic from original data
     print("\t\t\t\tCalculating original stats with scan_lags")
-    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic)
+    scanlag = scan_lags(xstar,ystar.reshape(-1,1),statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic, nproc_scan=nproc_scan)
     score = np.max(scanlag[1]); # no np.max in test_bad
     
     # sometimes twin produce surrogates shorter than original series (example: FitzHugh_Nagumo_cont[14] embed_dim =3, tau = 1, the surr is only 498)
@@ -371,7 +372,7 @@ def sig_test_good(xstar, ystar, surr, statistic, maxlag, steplag, shorter=False,
     # find null statistic for each surrogate 
     # using same maximizing procedure as original
     print("\t\t\t\tCalculating null stats with scan_lags")
-    scanlagsurr = scan_lags(xstar,surr,statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic)
+    scanlagsurr = scan_lags(xstar,surr,statistic=statistic, maxlag=maxlag, steplag=steplag, kw_statistic=kw_statistic, nproc_scan=nproc_scan)
     null = np.max(scanlagsurr[1:],axis=1);
     
     #one tailed test
@@ -412,10 +413,14 @@ def whichstats(stat, xory):
     return stat_fxn
     # 'pcc_param', 'granger_param_y->x', 'granger_param_x->y'
     
-def iter_stats(a, b, surrmeth, n_surr, stats_list, maxlag, steplag, xory, kw_randphase, kw_twin, r_tts, kw_statistic = {}):#
+def iter_stats(a, b, surrmeth, n_surr, stats_list, maxlag, steplag, xory, kw_randphase, kw_twin, r_tts, kw_statistic = {}, 
+               nproc_scan=2, nproc_ccm=2, nproc_embed=1):#
     # print(a[0], b[0], stats_list, maxlag, xory)
     # res = ['pvals': {}, 'runtimes': {}, 'test_params': {}]
     test_params = {'maxlag': maxlag}
+    kw_statistic = dict(kw_statistic)
+    kw_statistic["nproc_ccm"] = nproc_ccm
+    kw_statistic["nproc_embed"] = nproc_embed
     A, B, SURR, test_params['surr_params'] = create_surr(a, b, surrmeth, n_surr=n_surr, kw_randphase=kw_randphase, kw_twin=kw_twin, r_tts=r_tts)
     pvals = {}
     runtimes = {}
@@ -423,12 +428,13 @@ def iter_stats(a, b, surrmeth, n_surr, stats_list, maxlag, steplag, xory, kw_ran
         print(f'Running {stat} in many stats for Y or X surr')
         stat_fxn = whichstats(stat, xory)
         start = time.time()
-        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, steplag=steplag, kw_statistic = kw_statistic)
+        pvals[stat] = sig_test_good(A, B, SURR, stat_fxn, maxlag=maxlag, steplag=steplag, kw_statistic = kw_statistic, nproc_scan=nproc_scan)
         runtimes[stat] = time.time() - start
     return pvals, runtimes, test_params
    
 # from multiprocessing import Pool 
-def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={}):
+def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={},
+                       nproc_scan=2, nproc_ccm=2, nproc_embed=1):
     '''
     calls -> iter_stats -> sig_test_good which is currently running tailored lag by default.
     the option for fixed lag has not been developed
@@ -464,7 +470,8 @@ def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, stepla
         stats_list = ['pearson', 'lsa', 'mutual_info', 
                       'granger_y->x', 'granger_x->y', 
                       'ccm_y->x', 'ccm_x->y']
-    test_list = set(['tts_naive' if 'tts' in _ else _ for _ in test_list])
+    test_list = ['tts_naive' if 'tts' in _ else _ for _ in test_list]
+    test_list = list(dict.fromkeys(test_list))
     
     # result = []
     print(f'Many stats many surr {stats_list}, {test_list}')
@@ -476,9 +483,9 @@ def manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, stepla
         ARGsurrY = (x, y, surrmeth, n_surr, stats_list, maxlag, steplag, 'surrY', kw_randphase, kw_twin, r_tts, kw_statistic)# 
         ARGsurrX = (y, x, surrmeth, n_surr, stats_list, maxlag, steplag, 'surrX', kw_randphase, kw_twin, r_tts, kw_statistic)# 
         print(f'Running {surrmeth} for Y')
-        score_null_pval['surrY'][surrmeth], runtime['surrY'][surrmeth], test_params['surrY'][surrmeth] = iter_stats(*ARGsurrY)
+        score_null_pval['surrY'][surrmeth], runtime['surrY'][surrmeth], test_params['surrY'][surrmeth] = iter_stats(*ARGsurrY, nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
         print(f'Running {surrmeth} for X') 
-        score_null_pval['surrX'][surrmeth], runtime['surrX'][surrmeth], test_params['surrX'][surrmeth] = iter_stats(*ARGsurrX)
+        score_null_pval['surrX'][surrmeth], runtime['surrX'][surrmeth], test_params['surrX'][surrmeth] = iter_stats(*ARGsurrX, nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
     # tts_p = {xory : {'tts': {stat : [B * (2 * r + 1) / (r + 1) for B in pvals[xory]['tts_naive'][stat] ]
     #                         for stat in new_res['stats_list']}
     #                     }

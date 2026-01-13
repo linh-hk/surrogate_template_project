@@ -17,7 +17,7 @@ from statsmodels.tsa.api import VAR # vector autoregression for granger
 # from Simulation_code.surrogate_dependence_test.multiprocessor import Multiprocessor
 # import time
 #%%
-def granger_surr_predict(x,y,pval=False):
+def granger_surr_predict(x,y,pval=False, **kwargs):
     print("\t\t\t\t\t\tGranger")
     t,N = y.shape; # y is surrY matrix
     if (N == 1):
@@ -47,7 +47,7 @@ def granger_surr_predict(x,y,pval=False):
                 result[i] = granger(data, [maxlag], verbose=False)[maxlag][0]['ssr_ftest'][0];
         return result;
 
-def granger_predict_surr(x,y,pval=False):
+def granger_predict_surr(x,y,pval=False, **kwargs):
     print("\t\t\t\t\t\tGranger")
     t,N = y.shape; # y is surrY matrix
     if (N == 1):

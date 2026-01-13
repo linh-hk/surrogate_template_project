@@ -58,6 +58,7 @@ class Multiprocessor:
                 status, payload = self.queue.get()  # blocks until one result
                 if status == "ERR":
                     print("Worker error:", payload, flush=True)
+                    raise RuntimeError(payload)
                 self.result.append(payload)
 
             for p in batch:

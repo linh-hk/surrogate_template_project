@@ -144,9 +144,11 @@ def ccm_predict_surr_iter(embX, Y, Yidx, KX, RX, n, embed_dim, tau, pred_lag, we
     
 def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], replace=False,
               n_replicates=1, weights='exp', score=pcorr,
-              variable_libs=False, res = True):# , pred_lag=0
+              variable_libs=False, res = True,
+              **kwargs):# , pred_lag=0
     # data = np.vstack((x, ysurr.T)).T
     # choose embed params
+    nproc_ccm = int(kwargs.get("nproc_ccm",2))
     if res:
         print('\t\t\t\t\t\tCCM predict surr')
         print('\t\t\t\t\t\t\tChoosing embed')
@@ -154,7 +156,7 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
     else:
         pred_lag = 1
     if embed_dim == None and tau == None: 
-        embed_dim, tau = choose_embed_params(x)
+        embed_dim, tau = choose_embed_params(x, **kwargs)
     
     if res: 
         print("\t\t\t\t\t\t\tOfficial ccm")
@@ -173,7 +175,7 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
         for each_PS in enumerate(Y):
             ARGs=(X, each_PS[1], each_PS[0], KX, RX, n, embed_dim, tau, pred_lag, weights, score)
             mp.add(ccm_predict_surr_iter, ARGs)
-        mp.run(5) 
+        mp.run(nproc_ccm) 
         result = mp.results()
     
     result_sorted = pd.DataFrame(result, columns=['surr_id', 'embed_dim', 'tau', 'n', 'score']).sort_values('surr_id')
@@ -189,11 +191,11 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
 # time.time() - start
 #%% surr_predict
 
-def ccm_surr_predict_iter(x, ysingle, yid, weights, score): 
+def ccm_surr_predict_iter(x, ysingle, yid, weights, score, kwargs): 
     """ X is array of resp and Y is embeded feat"""
     # choose embed dim and tau
     pred_lag=0
-    embed_dim, tau = choose_embed_params(ysingle)
+    embed_dim, tau = choose_embed_params(ysingle, **kwargs)
     feat = []
     resp = []
     idx_template = np.array([pred_lag] + [-i*tau for i in range(embed_dim)])
@@ -254,7 +256,8 @@ def ccm_surr_predict_iter(x, ysingle, yid, weights, score):
 
 def ccm_surr_predict(x, ysurr, lib_sizes=[None], replace=False,
               n_replicates=1, weights='exp', score=pcorr,
-              variable_libs=False): # , pred_lag=0
+              variable_libs=False,
+              **kwargs): # , pred_lag=0
     # # choose embed params
     # id_ed_tau = list(map(lambda x: choose_embed_params(x), enumerate(ysurr))
     # # set up matrices
@@ -267,16 +270,16 @@ def ccm_surr_predict(x, ysurr, lib_sizes=[None], replace=False,
     # result = [ccm_surr_predict_iter(x, ysingle, yid, weights, score, pred_lag = 0) for yid, ysingle in enumerate(ysurr.T)]
     # 317.0869941711426 sec
     # 256.24677634239197
-    
+    nproc_ccm = int(kwargs.get("nproc_ccm", 2))
     print('\t\t\t\t\t\tCCM surr predict')
     
     ysurrs = [np.array(ysurr[:,_]) for _ in np.arange(ysurr.shape[1])]
     
     mp = Multiprocessor()
     for each_ES in enumerate(ysurrs):
-        ARGs = (x, each_ES[1], each_ES[0], weights, score)# , pred_lag
+        ARGs = (x, each_ES[1], each_ES[0], weights, score, kwargs)# , pred_lag
         mp.add(ccm_surr_predict_iter, ARGs)
-    mp.run(3) 
+    mp.run(nproc_ccm) # 3 
     result = mp.results()
     # print('what s happenning', result[0], 'got results')
     result_sorted = pd.DataFrame(result, columns=['surr_id', 'embed_dim', 'tau', 'n', 'score']).sort_values('surr_id')
@@ -326,7 +329,8 @@ def ccm_surr_predict(x, ysurr, lib_sizes=[None], replace=False,
 def choose_embed_params(emb_series, ed_grid=np.arange(1,5), tau_grid=np.arange(1,9),
                         lib_sizes = [None], replace = [False], n_replicates=1, 
                         weights='exp', score=pcorr, 
-                        variable_libs=False, res = False): # , pred_lag=1
+                        variable_libs=False, res = False,
+                        **kwargs): # , pred_lag=1
     # ts is x series.
     # mm = len(ed_grid)
     # mmm = len(tau_grid)
@@ -337,15 +341,19 @@ def choose_embed_params(emb_series, ed_grid=np.arange(1,5), tau_grid=np.arange(1
     # data[:,1] = emb_series 
     # dat = np.tile(np.array(data),mmm)
     # print(np.array([np.repeat(ed_grid,mmm*mmmm), np.tile(tau_grid,mm*mmmm), np.tile(np.repeat(pred_lag,mmm),mm)]).T)
+    nproc_embed = int(kwargs.get("nproc_embed",1))
     
     ARGs = []
     for ed in ed_grid:
         for tau in tau_grid:
             ARGs.append((emb_series, emb_series, ed, tau, lib_sizes, replace, n_replicates, weights, score, variable_libs, res))# , lag
-    with Pool(5) as p:
-        ccm_res = list(p.starmap(ccm_predict_surr, ARGs))
-        p.close()
-        p.join()
+    if nproc_embed <= 1:
+        ccm_res = [ccm_predict_surr(*args) for args in ARGs]
+    else:
+        with Pool(nproc_embed) as p:
+            ccm_res = list(p.starmap(ccm_predict_surr, ARGs))
+            p.close()
+            p.join()
         
     # ccm_res = list(map(ccm_predict_surr, 
     #                     [emb_series]*mall, [emb_series]*mall,
