@@ -8,11 +8,15 @@ Created on Wed Jan 18 11:03:15 2023
 Pearson correlation, lsa, mutual infomation
 """
 #%% Set working directory
+import logging
+log = logging.getLogger(__name__)
+
 import os
-print(f'working directory: {os.getcwd()}')
+# print(f'working directory: {os.getcwd()}')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test')
 # os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.getcwd()
+log.info("working directory: %s", os.getcwd())
 #%% Import libraries
 # import GenerateData as dataGen
 import numpy as np
@@ -22,7 +26,7 @@ from sklearn.feature_selection import mutual_info_regression # for mutual inform
 #%%% Correlation Statistics
     #%%%% Pearson correlations
 def correlation_Pearson(x, y, **kwargs):
-    print("\t\t\t\t\t\tpearson correlation coefficients")
+    # log.info("pearson correlation coefficients")
     M = np.zeros([x.size, y.shape[1] + 1])
     M[:,0] = x
     M[:,1:] = y
@@ -62,7 +66,7 @@ def lsa_main(xy_):
     return {'P':P, 'N':N}
 
 def lsa_new(x,y_array):
-    print("\t\t\t\t\t\tlocal similarity analysis")
+    # log.info("local similarity analysis")
     # lsa with Delay=0 
     # x and y are time series
     # returns: local similarity
@@ -79,7 +83,7 @@ def lsa_new(x,y_array):
     return np.max([score_P, score_N], axis=0) * sign
 
 def lsa_new_delay(x,y_arr,D=3, **kwargs):
-    print("\t\t\t\t\t\tlocal similarity analysis")
+    # log.info("local similarity analysis")
     # y_array should be (replicates,timepoints)
     n = x.size
     y_array = y_arr.T
@@ -115,7 +119,7 @@ def lsa_new_delay(x,y_arr,D=3, **kwargs):
     log( 1 ) = 0 => X and Y are independent.    
     """
 def mutual_info(x,y, **kwargs):
-    print("\t\t\t\t\t\tmutual information")
+    # log.info("mutual information")
     return mutual_info_regression(y, x, n_neighbors=3).flatten()
 
 #%% Parametric test - not used

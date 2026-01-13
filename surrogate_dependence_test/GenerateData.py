@@ -5,6 +5,8 @@ Created on Mon Nov 21 16:19:27 2022
 @author: hoang
 """
 #%% Import libraries
+import logging
+log = logging.getLogger(__name__)
 # import numpy as np
 # import pandas as pd
 import scipy as sp
@@ -15,7 +17,7 @@ import random
 
 #%% Generate data, two dependent series
 def generate_AR1_uni_tau1(size):
-    print('Generating AR1_uni_tau1')
+    log.info('Generating AR1_uni_tau1')
     x, y = sp.stats.norm.rvs(size = size + 1), sp.stats.norm.rvs(size = size + 1)
     # x_series, y_series = [] , []
     # x_series.append(wn_x[0])
@@ -27,7 +29,7 @@ def generate_AR1_uni_tau1(size):
 
 # Unidirectional AR(1)
 def generate_AR1_uni_tau2(size):
-    print('Generating AR1_uni_tau2')
+    log.info('Generating AR1_uni_tau2')
     x,y = sp.stats.norm.rvs(size = size + 2), sp.stats.norm.rvs(size = size + 2)
     for t in range(1, size+1):
         x[t+1] = 0.4 * x[t] + 0.3*y[t-1] + x[t+1]
@@ -36,7 +38,7 @@ def generate_AR1_uni_tau2(size):
 
 # Unidirectional logistic map
 def generate_uni_logistic_map(size):
-    print('Generating uni_logistic_map')
+    log.info('Generating uni_logistic_map')
     x,y = np.zeros(size + 500), np.zeros(size + 500)
     x[0] , y[0] = np.random.uniform(0.2, 0.8) , np.random.uniform(0.2, 0.8)
     for t in range(1, size+500-1):
@@ -59,7 +61,7 @@ def draw_x_y(X, Y):
 #%% Generate indepdendent data
 #%%% Stationary
 def generate_ar1(length):
-    print('Generating normal AR1')
+    log.info('Generating normal AR1')
     x = np.zeros(length+1);
     x[0]= np.random.normal(loc =0, scale=(1-0.7**2)**(-1/2));
     for i in range(length):
@@ -67,7 +69,7 @@ def generate_ar1(length):
     return x[1:];
         
 def generate_logistic_map(length):
-    print('Generating normal logistic map')
+    log.info('Generating normal logistic map')
     x = np.zeros(length+1);
     x[0] = np.random.beta(0.5, 0.5);
     for i in range(length):
@@ -75,7 +77,7 @@ def generate_logistic_map(length):
     return x;
 
 def generate_sine_w_noise(length):
-    print('Generating sine wave with noise')
+    log.info('Generating sine wave with noise')
     t = range(1,length + 1)
     phi_a = np.random.randint(0,2799, size = length)
     # or ? phi_a = np.random.uniform(0,2799, size = length)
@@ -91,7 +93,7 @@ def generate_sine_w_noise(length):
     return [x_t, y_t]
     
 def generate_sinew_intmt_corptxn(length):
-    print('Generating sine wave with intermitment coruption')
+    log.info('Generating sine wave with intermitment coruption')
     t= np.arange(1,length + 1)
     phi = np.random.uniform(0, 2*np.pi, size = length)
     epsilon_t = np.random.uniform(0,1, size = length)
@@ -101,7 +103,7 @@ def generate_sinew_intmt_corptxn(length):
     return x_t
 
 def generate_coinflips_w_changeHeadprob_noise(length):
-    print('Generating coinflips with changing of Head probability with noise')
+    log.info('Generating coinflips with changing of Head probability with noise')
     t = np.arange(1, length + 1)
     phi_1, phi_2 = np.random.uniform(0, 2*np.pi,size = length), np.random.uniform(0, 2*np.pi,size = length)
     a_t_1 = ((1/2)**7) * ((np.sin(phi_1 + 2*np.pi*t /75) + 1)**6)
@@ -115,7 +117,7 @@ def generate_coinflips_w_changeHeadprob_noise(length):
     return x
 
 def generate_noise_w_periodically_varying_kurtosis(length):
-    print('Generating noise with periodically varying kurtosis')
+    log.info('Generating noise with periodically varying kurtosis')
     epsilon = np.random.uniform(-np.sqrt(3.03),np.sqrt(3.03), size = length)
     v = np.random.normal(0, 0.1, size = length)
     beta = random.choices([-1,1],[0.5,0.5], k = length)
@@ -149,7 +151,7 @@ def d_FitzHugh_Nagumo_(t, x_w):
     return np.array([dx_t, dw_t])
 
 def generate_FitzHugh_Nagumo(N, dxy_dt = d_FitzHugh_Nagumo, dt_s = 0.25):
-    print('Generating FitzHugh-Nagumo')
+    log.info('Generating FitzHugh-Nagumo')
     dt=0.05;
     sample_period = int(np.ceil(dt_s / dt));
     
@@ -182,7 +184,7 @@ def generate_discrete_FitzHugh_Nagumo(size, delta_t = 0.05):
     
 #%%% Non stationary
 def generate_random_walk(length):
-    print('Generating random walk')
+    log.info('Generating random walk')
     epsilon = np.random.standard_normal(length)
     x = np.zeros(length)
     for t in range(length):
@@ -190,7 +192,7 @@ def generate_random_walk(length):
     return x
 
 def generate_ar1_w_trend(length):
-    print('Generating AR1 with trend')
+    log.info('Generating AR1 with trend')
     a = generate_ar1(length = length)
     return a + np.divide(range(1,length),60)
 
@@ -236,7 +238,7 @@ def sc_prime_rsrc(t, y, num_spec, r0, K, alpha, beta, rho_plus, rho_minus,r_flux
 
 # Caroline sent: run nonlinearity test, Linh modified to only generate ts
 def generate_niehaus(run_id, dt_s, N, noise, noise_T, intx="competitive"):
-    print('Generating Caroline bacterial chemically regulated model')
+    log.info('Generating Caroline bacterial chemically regulated model')
     dt=0.05;
     sample_period = int(np.ceil(dt_s / dt));
     
@@ -288,14 +290,14 @@ def generate_niehaus(run_id, dt_s, N, noise, noise_T, intx="competitive"):
     x = s[lag:lag+obs:sample_period,].copy()
     
     if (np.any(x < 2.)):
-        print("Crossover?")
+        log.info("Crossover?")
     
     # return test_with_surr(x.reshape(-1,1));
     return x
 #%%% Caroline AR
 # AR model for control
 def ar_control(noise=1.0):
-    print('Generating Caroline AR model for control')
+    log.info('Generating Caroline AR model for control')
     x = np.zeros(601);
     for i in range(600):
         x[i+1] = 0.8*x[i] + noise*np.random.randn();
@@ -313,7 +315,7 @@ def lotkaVolterraSat(t,y,mu,M,K):
     return lv;
 
 def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra, measurement_noise = 0): # ,intx="competitive"
-    print('Generating Caroline Lotka-Volterra model')
+    log.info('Generating Caroline Lotka-Volterra model')
     dt=0.05; # integration step
     lag = int(250/dt) # int(150/dt) # 30000
     sample_period = int(np.ceil(dt_s / dt)); 
@@ -501,6 +503,12 @@ def vis_data(ts, titl = ""):
 
 #%% Run
 if __name__=="__main__":
+    import sys
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
     datagen_params = {'mode': "competitive",
                       'dt_s': 0.25, 
                       'N': 500,
@@ -509,7 +517,7 @@ if __name__=="__main__":
                       'noise': 0.05*0.5}
     reps = 1;
     ts_ar = ar_control()
-    ts_lv = generate_lv(run_id = 1, dt_s = datagen_params['dt_s'], N=datagen_params['N'], noise=datagen_params['noise'],noise_T=datagen_params['noise_T'],intx="competitive")
+    ts_lv = generate_lv(dt_s = datagen_params['dt_s'], N=datagen_params['N'], noise=datagen_params['noise'],noise_T=datagen_params['noise_T'],intx="competitive")
     ts_ch = generate_niehaus(run_id=1, dt_s=datagen_params['dt_s'], N=datagen_params['N'], noise=datagen_params['noise'], noise_T=datagen_params['noise_T'], intx=datagen_params['mode'])
     # func=generate_niehaus
     # Draw separately

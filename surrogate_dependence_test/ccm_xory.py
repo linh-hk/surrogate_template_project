@@ -8,10 +8,14 @@ Created on Fri May 26 14:00:56 2023
 Optimsed runtime using Multiprocessor.
 Old script is 'ccm.py' saved at ../Others/old_scripts
 """
+import logging
+log = logging.getLogger(__name__)
+
 import os
 # os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
-print(f'working directory: {os.getcwd()}')
+# print(f'working directory: {os.getcwd()}')
+log.info("working directory: %s", os.getcwd())
 
 # import time
 import numpy as np
@@ -150,8 +154,8 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
     # choose embed params
     nproc_ccm = int(kwargs.get("nproc_ccm",2))
     if res:
-        print('\t\t\t\t\t\tCCM predict surr')
-        print('\t\t\t\t\t\t\tChoosing embed')
+        log.info('CCM predict surr')
+        log.info('Choosing embed')
         pred_lag = 0
     else:
         pred_lag = 1
@@ -159,7 +163,7 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
         embed_dim, tau = choose_embed_params(x, **kwargs)
     
     if res: 
-        print("\t\t\t\t\t\t\tOfficial ccm")
+        log.info("Official ccm")
     # set up problem
     X, Y = ccm_predict_surr_setup_problem(x, ysurr, embed_dim, tau, pred_lag)
     # X is embeded feature, Y has 238 responses
@@ -271,7 +275,7 @@ def ccm_surr_predict(x, ysurr, lib_sizes=[None], replace=False,
     # 317.0869941711426 sec
     # 256.24677634239197
     nproc_ccm = int(kwargs.get("nproc_ccm", 2))
-    print('\t\t\t\t\t\tCCM surr predict')
+    log.info('CCM surr predict')
     
     ysurrs = [np.array(ysurr[:,_]) for _ in np.arange(ysurr.shape[1])]
     

@@ -5,10 +5,12 @@ Created on Sun May 28 19:40:55 2023
 
 @author: h_k_linh
 """
+import logging
+log = logging.getLogger(__name__)
 import os
 # os.chdir('C:/Users/hoang/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
-print(f'working directory: {os.getcwd()}')
+log.info("working directory: %s", os.getcwd())
 # os.getcwd()
 import numpy as np
 from statsmodels.tsa.stattools import grangercausalitytests as granger # for granger
@@ -18,7 +20,7 @@ from statsmodels.tsa.api import VAR # vector autoregression for granger
 # import time
 #%%
 def granger_surr_predict(x,y,pval=False, **kwargs):
-    print("\t\t\t\t\t\tGranger")
+    # log.info("Granger")
     t,N = y.shape; # y is surrY matrix
     if (N == 1):
         data = np.vstack((x,y.T)).T;
@@ -48,7 +50,7 @@ def granger_surr_predict(x,y,pval=False, **kwargs):
         return result;
 
 def granger_predict_surr(x,y,pval=False, **kwargs):
-    print("\t\t\t\t\t\tGranger")
+    # log.info("Granger")
     t,N = y.shape; # y is surrY matrix
     if (N == 1):
         data = np.vstack((y.T,x)).T;

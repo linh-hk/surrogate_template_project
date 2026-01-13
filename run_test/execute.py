@@ -11,6 +11,7 @@ Qsub passes args to python:
 
 qsub    ...             {cor_stat}      {surr_proc}     {folder_name}     {file_name}    {N_0}           
 qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]
+qsub    qsub.sh         a               a               multispecies    fina wo .pkl    0
 
 Arguments:
     cor_stat: string of statistic initials
@@ -59,6 +60,16 @@ from statsmodels.tsa.stattools import adfuller, kpss
 import warnings
 from statsmodels.tools.sm_exceptions import InterpolationWarning
 warnings.filterwarnings("ignore", category=InterpolationWarning)
+
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
+# Optional: silence chatty libraries
+logging.getLogger("statsmodels").setLevel(logging.WARNING)
 
 # from mpi4py.futures import MPIPoolExecutor
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
@@ -225,7 +236,7 @@ def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr,
 if __name__=="__main__":
     
     # test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
-    print(f'working directory: {os.getcwd()}')
+    log.info(f'working directory: {os.getcwd()}')
     if len(sys.argv) != 6:
         raise SystemExit(
             "Expected 5 arguments: cor_stat surr_proc folder_name file_name N0\n"
@@ -240,7 +251,7 @@ if __name__=="__main__":
     # Defaults
     maxlag = 0
     nsurr = 99
-    batch_N = 1000
+    batch_N = 100
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
@@ -252,7 +263,7 @@ if __name__=="__main__":
     abs_value = False
     data, meta = refine_run_data(data=data, N0=N0,
                                  alpha=alpha, top_k=top_k, value=value, abs_value=abs_value)
-    print(
+    log.info(
         f"Running: folder={folder_name}, file={file_name}.pkl, "
         f"range=[{N0}:{N0 + batch_N}), "
         f"tests={test_list}, stats={stats_list}, nsurr={nsurr}, maxlag={maxlag}"
@@ -300,14 +311,14 @@ if __name__=="__main__":
              'test_config': test_config,
              'data_meta': meta}
     
-    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag)
+    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=str(N0))
     
     fiS = f'{get_sample_dir(folder_name)}/{out_name}'
-    print(f'Saving at {fiS}')
+    log.info(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);
             
             #np.savetxt(fname,resultsList);
     sys.stdout.flush();
-    sys.stdout.write('Total time: %5.2f seconds\n' % (time.time() - start));
+    log.info('Total time: %5.2f seconds\n', time.time() - start);
     sys.stdout.flush();
