@@ -224,6 +224,11 @@ def refine_run_data(data, N0,
 #     plot_timeseries_all_species(series[0], title = "top2 both")
 # pick top 2 because after looking, it seems that most of them are close to 0 after filtered
 
+def falsepos_datagen(pairs):
+    n = len(pairs)
+    return [(np.column_stack((pairs[i][0][:, 0], pairs[(i + 1) % n][0][:, 1])),
+             pairs[i][1]) for i in range(n) ]
+
 def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr,
                 nproc_scan=2, nproc_ccm=2, nproc_embed=1):
     x = series[:, 0]
@@ -232,11 +237,6 @@ def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr,
     res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr,
                                  nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
     return {series_id: res}
-def falsepos_datagen(pairs):
-    n = len(pairs)
-    return [(np.column_stack((pairs[i][0][:, 0], pairs[(i + 1) % n][0][:, 1])),
-             pairs[i][1]) for i in range(n) ]
-
 if __name__=="__main__":
     
     # test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
