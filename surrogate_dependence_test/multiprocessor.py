@@ -5,8 +5,10 @@ Created on Mon May 29 11:35:14 2023
 
 @author: h_k_linh
 """
-import os
-import numpy as np
+# import os
+# import numpy as np
+import sys
+import traceback
 from multiprocessing import Process, Queue
 
 """
@@ -38,13 +40,20 @@ class Multiprocessor:
                 ret = func(*args)
             queue.put(("OK", ret))
         except Exception as e:
-            queue.put(("ERR", repr(e)))
+            tb = traceback.format_exc()
+
+            # Print from worker so it appears in the job log even if parent gets stuck
+            print("\n=== WORKER EXCEPTION TRACEBACK ===", file=sys.stderr, flush=True)
+            print(tb, file=sys.stderr, flush=True)
+
+            # Send full traceback back to parent
+            queue.put(("ERR_TB", tb))
 
     def add(self, func, args):
         p = Process(target=self._wrapper, args=(func, self.queue, args))
         self.processes.append(p)
 
-    def run(self, num_proc):
+    def run(self, num_proc, per_result_timeout_s=None):
         tot_proc = len(self.processes)
         for start in range(0, tot_proc, num_proc):
             batch = self.processes[start:start+num_proc]
@@ -55,15 +64,35 @@ class Multiprocessor:
 
             # pull results for this batch as they finish (prevents queue filling)
             for _ in batch:
-                status, payload = self.queue.get()  # blocks until one result
-                if status == "ERR":
-                    print("Worker error:", payload, flush=True)
-                    raise RuntimeError(payload)
+                try:
+                    if per_result_timeout_s is None:
+                        status, payload = self.queue.get()  # blocks until one result
+                    else:
+                        status, payload = self.queue.get(timeout=per_result_timeout_s)
+                except Exception:
+                    for p in batch:
+                        if p.is_alive():
+                            p.terminate()
+                    for p in batch:
+                        p.join()
+                    raise TimeoutError(f"Multiprocessor timeout: no worker result within "
+                                       f"{per_result_timeout_s} seconds (batch starting index {start})."
+                                       )
+                if status == "ERR_TB":
+                    # worker raised exception (payload is full traceback)
+                    print("\n=== PARENT RECEIVED WORKER TRACEBACK ===", flush=True)
+                    print(payload, flush=True)
+                    for p in batch:
+                        if p.is_alive():
+                            p.terminate()
+                    for p in batch:
+                        p.join()
+                    raise RuntimeError(f"Worker error: {payload}")
                 self.result.append(payload)
 
             for p in batch:
                 p.join()
-                print("Joined", p.pid, flush=True)
+                # print("Joined", p.pid, flush=True)
 
     def results(self):
         return self.result

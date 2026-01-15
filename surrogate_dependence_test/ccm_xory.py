@@ -179,7 +179,7 @@ def ccm_predict_surr(x, ysurr, embed_dim = None, tau = None, lib_sizes=[None], r
         for each_PS in enumerate(Y):
             ARGs=(X, each_PS[1], each_PS[0], KX, RX, n, embed_dim, tau, pred_lag, weights, score)
             mp.add(ccm_predict_surr_iter, ARGs)
-        mp.run(nproc_ccm) 
+        mp.run(nproc_ccm, per_result_timeout_s=1800) 
         result = mp.results()
     
     result_sorted = pd.DataFrame(result, columns=['surr_id', 'embed_dim', 'tau', 'n', 'score']).sort_values('surr_id')
@@ -283,7 +283,7 @@ def ccm_surr_predict(x, ysurr, lib_sizes=[None], replace=False,
     for each_ES in enumerate(ysurrs):
         ARGs = (x, each_ES[1], each_ES[0], weights, score, kwargs)# , pred_lag
         mp.add(ccm_surr_predict_iter, ARGs)
-    mp.run(nproc_ccm) # 3 
+    mp.run(nproc_ccm, per_result_timeout_s=1800) # 3 
     result = mp.results()
     # print('what s happenning', result[0], 'got results')
     result_sorted = pd.DataFrame(result, columns=['surr_id', 'embed_dim', 'tau', 'n', 'score']).sort_values('surr_id')
