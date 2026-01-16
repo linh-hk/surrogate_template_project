@@ -75,8 +75,8 @@ logging.getLogger("statsmodels").setLevel(logging.WARNING)
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 import main as sdt
 #%%
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
+# from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessor import Multiprocessor
 OUTER_WORKERS = 4
 
 # inner budget per pair (must sum <= 4-ish; these are “caps”)
@@ -270,30 +270,11 @@ if __name__=="__main__":
     data = falsepos_datagen(data)
     
     log.info(
-        f"FALSEPOS Running: folder={folder_name}, file={file_name}.pkl, FALSEPOS"
-        f"FALSEPOS range=[{N0}:{N0 + batch_N}), FALSEPOS"
-        f"FALSEPOS tests={test_list}, stats={stats_list}, nsurr={nsurr}, maxlag={maxlag}, FALSEPOS"
-    )
-    resultsList = []
-    start = time.time()
+        "FALSEPOS Running: folder=%s, file=%s.pkl, range=[%d:%d), tests=%s, stats=%s, nsurr=%d, maxlag=%d FALSEPOS | " 
+        "FALSEPOS Kept %d/%d trials after stationarity filter FALSEPOS", 
+        folder_name, file_name, N0, N0 + batch_N, test_list, stats_list, nsurr, maxlag, len(data), batch_N)
     
-    with ThreadPoolExecutor(max_workers=OUTER_WORKERS) as ex:
-        futs = []
-        for series, series_id in data:
-            futs.append(ex.submit(run_each_ts,
-                                  series, series_id, stats_list, test_list, maxlag, nsurr,
-                                  NPROC_SCAN, NPROC_CCM, NPROC_EMBED))
-        for fut in as_completed(futs):
-            resultsList.append(fut.result())
     
-    # for series, series_id in data:
-    #     ARGs = (series, series_id,stats_list, test_list, maxlag, nsurr)
-    #     # print(ARGs)
-    #     resultsList.append(run_each_ts(*ARGs))
-    
-    # with MPIPoolExecutor() as executor:
-    #     resultsIter = executor.map(run_each_ts, ARGs, unordered=True)
-    #     resultsList = [_ for _ in resultsIter]
     test_config = { "stationarity_filter": { "method": "ADF+KPSS",
                                             "alpha": alpha,
                                             "regression": "c",
@@ -314,18 +295,44 @@ if __name__=="__main__":
                              "isFALSEPOS": True
                              }
                    }
-    saveP = {'pvals' : resultsList,
-             'test_config': test_config,
+    saveP = {'test_config': test_config,
              'data_meta': meta}
     
     out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"{N0}_FALSEPOS")
-    
     fiS = f'{get_sample_dir(folder_name)}/{out_name}'
     log.info(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);
+    start = time.time()
+    
+    mp = Multiprocessor(output_file=fiS)
+    for series, series_id in data:
+        ARGs=(series, series_id, stats_list, test_list, maxlag, nsurr,
+              NPROC_SCAN, NPROC_CCM, NPROC_EMBED)
+        mp.add(run_each_ts, ARGs)
+    mp.run(OUTER_WORKERS, per_result_timeout_s=1800) 
+    
+    # with ThreadPoolExecutor(max_workers=OUTER_WORKERS) as ex:
+    #     futs = []
+    #     for series, series_id in data:
+    #         futs.append(ex.submit(run_each_ts,
+    #                               series, series_id, stats_list, test_list, maxlag, nsurr,
+    #                               NPROC_SCAN, NPROC_CCM, NPROC_EMBED))
+    #     for fut in as_completed(futs):
+    #         resultsList.append(fut.result())
+    
+    # for series, series_id in data:
+    #     ARGs = (series, series_id,stats_list, test_list, maxlag, nsurr)
+    #     # print(ARGs)
+    #     resultsList.append(run_each_ts(*ARGs))
+    
+    # with MPIPoolExecutor() as executor:
+    #     resultsIter = executor.map(run_each_ts, ARGs, unordered=True)
+    #     resultsList = [_ for _ in resultsIter]
+    
+    
             
             #np.savetxt(fname,resultsList);
     sys.stdout.flush();
-    log.info('Total time: %5.2f seconds\n', time.time() - start);
+    log.info('Total time: %.2f seconds\n', time.time() - start);
     sys.stdout.flush();

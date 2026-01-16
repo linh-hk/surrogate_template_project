@@ -5,10 +5,12 @@ Created on Mon May 29 11:35:14 2023
 
 @author: h_k_linh
 """
-# import os
+import os
 # import numpy as np
+import time
 import sys
 import traceback
+import pickle
 from multiprocessing import Process, Queue
 
 """
@@ -26,10 +28,15 @@ result = mp.results()
 """
 
 class Multiprocessor:
-    def __init__(self):
+    def __init__(self, output_file=None):
         self.processes = []
         self.queue = Queue()
         self.result = []
+        self.output_file = output_file
+        if self.output_file is not None:
+            outdir = os.path.dirname(self.output_file)
+            if outdir:
+                os.makedirs(outdir, exist_ok= True)
 
     @staticmethod
     def _wrapper(func, queue, args):
@@ -39,7 +46,7 @@ class Multiprocessor:
             else:
                 ret = func(*args)
             queue.put(("OK", ret))
-        except Exception as e:
+        except Exception:
             tb = traceback.format_exc()
 
             # Print from worker so it appears in the job log even if parent gets stuck
@@ -47,7 +54,7 @@ class Multiprocessor:
             print(tb, file=sys.stderr, flush=True)
 
             # Send full traceback back to parent
-            queue.put(("ERR_TB", tb))
+            queue.put(("ERR", tb))
 
     def add(self, func, args):
         p = Process(target=self._wrapper, args=(func, self.queue, args))
@@ -78,7 +85,7 @@ class Multiprocessor:
                     raise TimeoutError(f"Multiprocessor timeout: no worker result within "
                                        f"{per_result_timeout_s} seconds (batch starting index {start})."
                                        )
-                if status == "ERR_TB":
+                if status == "ERR":
                     # worker raised exception (payload is full traceback)
                     print("\n=== PARENT RECEIVED WORKER TRACEBACK ===", flush=True)
                     print(payload, flush=True)
@@ -88,7 +95,12 @@ class Multiprocessor:
                     for p in batch:
                         p.join()
                     raise RuntimeError(f"Worker error: {payload}")
-                self.result.append(payload)
+                
+                if self.output_file is not None:
+                    with open(self.output_file, "ab") as f:
+                        pickle.dump(payload, f)
+                else:
+                    self.result.append(payload)
 
             for p in batch:
                 p.join()
