@@ -328,7 +328,12 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, fn = lotkaVolterra, measurem
     
     for i in range(lag + obs):
         soln = solve_ivp(fn,[0,dt],s[i],args=args)
-        eps = noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n); # process noise/external perturbation = allow migration over time.
+        '''
+        x_i = x_i + x* + sqrt(x_i)*eps_i with eps_i~Normal distribution
+        '''
+        eps_ = np.sqrt(np.maximum(soln.y[:, -1], 0.0 )) # recommended = nitesh and akshit, makes extinct species stay extinct
+        eps = eps_*noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n)
+        # eps = noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n); # process noise/external perturbation = allow migration over time.
         # s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
         # s[i+1][np.where(s[i+1] < 0)] = 0;
         nxt = soln.y[:, -1] + eps
@@ -509,6 +514,8 @@ if __name__=="__main__":
         format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
+    
+    #%%
     datagen_params = {'mode': "competitive",
                       'dt_s': 0.25, 
                       'N': 500,
@@ -649,3 +656,25 @@ if __name__=="__main__":
     data['datagen_params'] = datagen_params
     del noise, n_species, mu, meanmu, sigma_crit, sigma, M, s0, i
     # akshit_50[0,2,3]
+    
+    #%% Scaled noise to stabilise system
+    import os
+    os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/')
+    n_species = 50
+    mu = intrinsic_growth_vector_mu(n_species)
+    M = np.load('multispecies_parameters/matrix.npy')
+    s0 = np.load(file='multispecies_parameters/s0_1.npy')
+    ARGs={'mode': 'multispecies_symmetrical_competition_s0_1', 
+                 'n_species': n_species,
+                 'dt_s': 0.25, 
+                 'N': 500,
+                 's0': s0,
+                 'mu': mu,
+                 'M': M,
+                 'noise': 0.001, # tested for 0.001, 9.005 and 0.0025, they squiggled more wildly but none that is as crazy as before Akshit and friend. : )
+                 'noise_T': 0.05}
+    
+    test = []
+    for i in range(100):
+        test.append(generate_lv(ARGs['dt_s'], ARGs['N'], ARGs['s0'], ARGs['mu'], ARGs['M'], ARGs['noise'], ARGs['noise_T']))
+        

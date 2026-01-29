@@ -9,8 +9,9 @@ Visualise
 """
 import os
 os.getcwd()
-os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+# os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
 # os.chdir('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
+os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/multispecies')
 os.getcwd()
 # import glob
 import numpy as np
@@ -49,6 +50,20 @@ font_data = {'fontsize' : 20, 'fontweight' : 'bold', 'fontname' : 'arial','color
 #%% Load results
 from sklearn.metrics import cohen_kappa_score
 # https://www.statology.org/cohens-kappa-python/
+
+def load_streamed_res(finame):
+    result = []
+    with open(finame, "rb") as f:
+        while True:
+            try:
+                obj = pickle.load(f)
+                result.append(obj)
+            except EOFError:
+                break
+    saveP = result[0]
+    saveP["pvals"] = result[1:]
+    return saveP
+
 def CohenKappa(X, Y):
     # https://www.statisticshowto.com/cohens-kappa-statistic/
     if len(X) == len(Y):
@@ -161,31 +176,37 @@ def merge_data(results, test_list, stat_list):
     return maxlag, runtime, test_params, test_list, pvals, n_surr
     
 class results:
-    def __init__(self, sample, whichrun = 'nolag_surr99', excl = [], incl = ['_']): # excl = ['falsepos'], incl = ['normalised']
-        if 'xy_' in sample:
-            sampdir = f'Simulated_data/{sample}/{whichrun}'
-        elif '500' in sample:
-            sampdir = f'Simulated_data/LVextra/{sample}/{whichrun}'
+    def __init__(self, sampdir_ = None, excl = [], incl = ['_']): # excl = ['falsepos'], incl = ['normalised']
+        # if 'xy_' in sample:
+        #     sampdir = f'Simulated_data/{sample}/{whichrun}'
+        # elif '500' in sample:
+        #     sampdir = f'Simulated_data/LVextra/{sample}/{whichrun}'
+        if sampdir_ is not None: sampdir = os.path.dirname(sampdir_)
         
         results = []
         # excl.append('data')
         for fi in os.listdir(sampdir):
             if any(pat in fi for pat in excl):
                 continue
-            elif any(pat in fi for pat in incl):
-                print(f'Loading:{sampdir}/{fi}')
-            # else:
-                with open(f'{sampdir}/{fi}', 'rb') as file:
-                    results.append(pickle.load(file))
-                    
-        for i in results:
-            if 'nsurr' not in i.keys():
-                results.append({'pvals': [{_key : _val} for _ in i['pvals'] for _key, _val in _.items()],#_key+900
-                                'stats_list': i['stats_list'],
-                                'test_list': i['test_list'],
-                                'nsurr': 99})
+            elif all(pat in fi for pat in incl):
+                # # for samples before multispecies results streaming
+                # with open(f'{sampdir}/{fi}', 'rb') as file:
+                #     results.append(pickle.load(file))
+                # for samples after results streaming
+                load_this = os.path.join(sampdir, fi) if sampdir else fi
+                print(f'Loading:{load_this}')
+                result = load_streamed_res(load_this)
+                results.append(result)
+        
+        # # for results before streamed results
+        # for i in results:
+        #     if 'nsurr' not in i.keys():
+        #         results.append({'pvals': [{_key : _val} for _ in i['pvals'] for _key, _val in _.items()],#_key+900
+        #                         'stats_list': i['stats_list'],
+        #                         'test_list': i['test_list'],
+        #                         'nsurr': 99})
                 # results.remove(i)
-        results = [_ for _ in results if 'nsurr' in _.keys()] 
+        # results = [_ for _ in results if 'nsurr' in _.keys()] 
         # results = resultss
         # del resultss
         '''falsepos = []
@@ -199,40 +220,6 @@ class results:
                       'granger_y->x', 'granger_x->y', 
                       'ccm_y->x', 'ccm_x->y')
         test_list = ('randphase', 'twin', 'tts_naive') 
-        # maxlag = set([sublist['pvals'][0][list(sublist['pvals'][0])  [0]]['test_params']['surrY'][sublist['test_list'][0]]['maxlag']
-        #               for sublist in results])
-        # pvalss = {}
-        # for ml in maxlag:
-        #     intermed = [_ for sublist in results for _ in sublist['pvals'] if 
-        #                 sublist['pvals'][0][ list(sublist['pvals'][0])[0] ]['test_params']['surrY'][sublist['test_list'][0]]['maxlag'] == ml]
-        #     pvalss[f'maxlag{ml}'] = merge(*intermed)           
-        
-        # try:
-        #     runtime = {lagkey: {xory : {cst : {stat : [trial['runtime'][xory][cst][stat] 
-        #                                         for idx, trial in lagitm.items()]
-        #                                 for stat in stat_list}
-        #                          for cst in test_list}
-        #                   for xory in ['surrY', 'surrX']}
-        #              for lagkey, lagitm in pvalss.items()}
-        # except:
-        #     runtime = 'not available'
-        # test_params = {lagkey: merge(*[trial['test_params'] for trial in lagitm.values()]) for lagkey, lagitm in pvalss.items()}
-        
-        # pvals = {lagkey: {xory : {cst : {stat : [trial['score_null_pval'][xory][cst][stat]['pval'] 
-        #                                     for idx, trial in lagitm.items()]
-        #                             for stat in stat_list}
-        #                      for cst in test_list}
-        #               for xory in ['surrY', 'surrX']}
-        #          for lagkey, lagitm in pvalss.items()}
-        # r = {lagkey: lagitm['surrY']['tts_naive']['surr_params']['r_tts']
-        #      for lagkey, lagitm in test_params.items()}
-        # tts_pvals = {lagkey: {xory : {'tts': {stat : [B * (2 * r[lagkey] + 1) / (r[lagkey] + 1) for B in lagitm[xory]['tts_naive'][stat] ]
-        #                                       for stat in stat_list}
-        #                               }
-        #                       for xory in ['surrY', 'surrX']}
-        #              for lagkey, lagitm in pvals.items()}
-        # test_list = (*test_list, 'tts')
-        # pvals = merge(pvals, tts_pvals)
         
         maxlag, runtime0, test_params, test_list0, pvals, n_surr = merge_data(results, test_list, stat_list)
         ''' fp_maxlag, fp_runtime, fp_test_params, fp_test_list, fp_pvals = merge_data(falsepos, test_list, stat_list)'''
@@ -939,3 +926,7 @@ if __name__ == "__main__":
     testfp = DataFfp_8.melt(ignore_index= False, var_name = "xory", value_name = "pvals").pivot_table(values = "pvals", index = ["maxlag", "stats"], columns = ["surrogate_test", "xory"])#.groupby("maxlag")
     testfp = testfp.loc[row,col]
     testfp.to_csv('C:/Users/hoang/Dropbox (Personal)/independence_tests/data/Figure5and8/Fig8fpr_1000counts.csv', sep=',', index=True, encoding='utf-8')
+
+    #%% Multispecies
+    batch = "multispecies_symmetrical_competition_s0_1"
+    Res = results()

@@ -41,6 +41,16 @@ sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_depend
 from GenerateData import generate_lv
 from multiprocessor import Multiprocessor
 
+def load_streamed_data(tmp_file):
+    data = []
+    with open(tmp_file, "rb") as f:
+        while True:
+            try:
+                data.append(pickle.load(f))
+            except EOFError:
+                break
+    return data
+
 def save_data(filename, data, tag = '', foldername = 'LVextra'):
     thispath = 'Simulated_data/'+ foldername + '/'
     if not os.path.exists(thispath): 
@@ -154,16 +164,30 @@ if __name__ == '__main__':
     #                  'M': M,
     #                  'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
     #                  'noise_T': 0.05})
-    s0 = np.load(file='multispecies_parameters/s0_1.npy')
-    ARGs.append({'mode': 'multispecies_symmetrical_competition_s0_1', 
-                 'n_species': n_species,
-                 'dt_s': 0.25, 
-                 'N': 500,
-                 's0': s0,
-                 'mu': mu,
-                 'M': M,
-                 'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
-                 'noise_T': 0.05})
+    
+    # s0 = np.load(file='multispecies_parameters/s0_1.npy')
+    # ARGs.append({'mode': 'multispecies_symmetrical_competition_s0_1', 
+    #              'n_species': n_species,
+    #              'dt_s': 0.25, 
+    #              'N': 500,
+    #              's0': s0,
+    #              'mu': mu,
+    #              'M': M,
+    #              'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+    #              'noise_T': 0.05})
+    
+    # After stabilising the system as Akshit suggested
+    for i in [1,2,3]:
+        s0 = np.load(file=f'multispecies_parameters/s0_{i}.npy')
+        ARGs.append({'mode': f'stabilised_multispecies_s0_{i}', 
+                     'n_species': n_species,
+                     'dt_s': 0.25, 
+                     'N': 500,
+                     's0': s0,
+                     'mu': mu,
+                     'M': M,
+                     'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+                     'noise_T': 0.05})
     start = time.time()
     reps = 1000
     for ARGS in ARGs:
@@ -171,11 +195,13 @@ if __name__ == '__main__':
         # Extract needed items in ARGS
         ARGS_ = (ARGS['dt_s'], ARGS['N'], ARGS['s0'], ARGS['mu'], ARGS['M'], ARGS['noise'], ARGS['noise_T'])
         
-        mp = Multiprocessor()
+        tmp_file = f"temp_{ARGS['mode']}"
+        mp = Multiprocessor(output_file=tmp_file)
         for i in range(reps):
             mp.add(iter_generatelv, ARGS_)
         mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
-        data = mp.results()
+        # data = mp.results()
+        data = load_streamed_data(tmp_file)
         
         # data = []
         # for i in range(reps):
@@ -186,6 +212,7 @@ if __name__ == '__main__':
         filename = '_'.join([ARGS['mode'], 'noise', str(ARGS['noise'])])
         savethis = {'data': data, 'datagen_params': ARGS, 'runtime': runtime}
         save_data(filename, savethis, tag=str(reps), foldername = 'multispecies')
+        os.remove(tmp_file)
         del ARGS_, data, savethis
 
     sys.stdout.flush();
