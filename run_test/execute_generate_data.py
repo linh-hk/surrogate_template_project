@@ -59,10 +59,10 @@ def save_data(filename, data, tag = '', foldername = 'LVextra'):
     with open(filepath, 'wb') as fi:
         pickle.dump(data, fi)
         
-def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T):
+def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip):
     # print((os.getpid() * int(time.time())) % 123456789)
     np.random.seed() # (os.getpid() * int(time.time())) % 123456789
-    return generate_lv(dt_s, N, s0, mu, M, noise, noise_T)
+    return generate_lv(dt_s=dt_s, N=N, s0=s0, mu=mu, M=M, noise=noise, noise_T=noise_T, time_skip = time_skip)
 #%%
 if __name__ == '__main__': 
     
@@ -177,23 +177,37 @@ if __name__ == '__main__':
     #              'noise_T': 0.05})
     
     # After stabilising the system as Akshit suggested
-    for i in [1,2,3]:
-        s0 = np.load(file=f'multispecies_parameters/s0_{i}.npy')
-        ARGs.append({'mode': f'stabilised_multispecies_s0_{i}', 
-                     'n_species': n_species,
-                     'dt_s': 0.25, 
-                     'N': 500,
-                     's0': s0,
-                     'mu': mu,
-                     'M': M,
-                     'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
-                     'noise_T': 0.05})
+    # for i in [1,2,3]:
+    #     s0 = np.load(file=f'multispecies_parameters/s0_{i}.npy')
+    #     ARGs.append({'mode': f'stabilised_multispecies_s0_{i}', 
+    #                  'n_species': n_species,
+    #                  'dt_s': 0.25, 
+    #                  'N': 500,
+    #                  's0': s0,
+    #                  'mu': mu,
+    #                  'M': M,
+    #                  'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+    #                  'noise_T': 0.05})
+    
+    # Added time skip for s_3 because some of them wiggled
+    s0 = np.load(file='multispecies_parameters/s0_3.npy')
+    ARGs.append({'mode': 'multispecies_symmetrical_competition_s0_3', 
+                 'n_species': n_species,
+                 'dt_s': 0.25, 
+                 'N': 500,
+                 's0': s0,
+                 'mu': mu,
+                 'M': M,
+                 'noise': 0.001, # tested for 0.01, they will all oscilate around 0.1 eventually : )
+                 'noise_T': 0.05,
+                 'time_skip': 275})
+    
     start = time.time()
     reps = 1000
     for ARGS in ARGs:
         trial_start_time = time.time()
         # Extract needed items in ARGS
-        ARGS_ = (ARGS['dt_s'], ARGS['N'], ARGS['s0'], ARGS['mu'], ARGS['M'], ARGS['noise'], ARGS['noise_T'])
+        ARGS_ = (ARGS['dt_s'], ARGS['N'], ARGS['s0'], ARGS['mu'], ARGS['M'], ARGS['noise'], ARGS['noise_T'], ARGS['time_skip'])
         
         tmp_file = f"temp_{ARGS['mode']}"
         mp = Multiprocessor(output_file=tmp_file)
