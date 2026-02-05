@@ -68,6 +68,7 @@ if __name__ == '__main__':
     # Multispecies, multistability, no chaos with process noise
     ## one matrix, 20 random initial condition
     from GenerateData import intrinsic_growth_vector_mu, multistability_crit, im_symmetric_M, initial_conditions_s0
+    mat_num = sys.argv[1]
     noise = 0.001
     n_species = 50
     mu = intrinsic_growth_vector_mu(n_species)
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     sigma_crit = multistability_crit(meanmu, n_species) # 0.05
     sigma = 0.3
     M = im_symmetric_M(S=n_species, meanmu=meanmu, sigma=sigma)
-    datagen_params = {'mode': "multispecies_M1",
+    datagen_params = {'mode': f"multispecies_M{mat_num}",
                       'n_species': n_species,
                       'N': 500,
                       'dt_s': 0.25, 
