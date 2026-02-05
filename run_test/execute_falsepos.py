@@ -55,8 +55,6 @@ import time
 # import dill # load and save data
 import pickle # load and save data
 
-from statsmodels.tsa.stattools import adfuller, kpss
-
 import warnings
 from statsmodels.tools.sm_exceptions import InterpolationWarning
 warnings.filterwarnings("ignore", category=InterpolationWarning)
@@ -136,93 +134,13 @@ def name_output(choose_name, cor_stat_arg='a', test_list_arg='a', maxlag=0, note
     parts += [cor_stat_arg, test_list_arg, "maxlag", str(maxlag)]
     return "_".join(parts) + ".pkl"
 
-#%% Execution
-def adf_p(x, regression="c", autolag="AIC", maxlag=None):
-    x = np.asarray(x, dtype=float)
-    return adfuller(x, regression=regression, autolag=autolag, maxlag=maxlag)[1]
-
-def kpss_p(x, regression="c", nlags="auto"):
-    x = np.asarray(x, dtype=float)
-    return kpss(x, regression=regression, nlags=nlags)[1]
-
-def stationary_evaluate(X, alpha=0.05, regression="c", 
-                        autolag="AIC", maxlag=None, 
-                        nlags="auto"):
-    """
-    X: (T,S)
-    Returns boolean mask (S,) for species that are stationary over the whole window:
-      ADF p < alpha  AND  KPSS p > alpha
-    """
-    X = np.asarray(X, dtype=float)
-    S = X.shape[1]
-    mask = np.zeros(S, dtype=bool)
-
-    for s in range(S):
-        x = X[:, s]
-        p_adf = adf_p(x, regression=regression, autolag=autolag, maxlag=maxlag)
-        p_kpss = kpss_p(x, regression=regression, nlags=nlags)
-        mask[s] = (p_adf < alpha) and (p_kpss > alpha)
-
-    return mask
-
-def choose_pair(trial, alpha=0.05, top_k=2, value="mean", abs_value=False,
-                regression="c", autolag="AIC", maxlag=None, nlags="auto"):
-    """
-    Filters by stationarity over the full window using:
-      ADF p < alpha AND KPSS p > alpha
-
-    Returns:
-      pair_ts   : (T,2) array
-      pair_idx  : (s1,s2) original species indices
-      stationary: array of stationary species indices (for trace/debug)
-    """
-    mask = stationary_evaluate(
-        trial, alpha=alpha, regression=regression, autolag=autolag,
-        maxlag=maxlag, nlags=nlags
-    )
-    stationary = np.where(mask)[0]
-    if stationary.size < 2:
-        return None, (-1, -1), stationary
-
-    # value to rank (not returned)
-    if value == "median":
-        vals = np.median(trial, axis=0)
-    else:
-        vals = np.mean(trial, axis=0)
-
-    key = np.abs(vals[stationary]) if abs_value else vals[stationary]
-    order = stationary[np.argsort(key)[::-1]]
-
-    s1 = int(order[0])
-    s2 = int(order[min(top_k - 1, order.size - 1)])
-
-    pair_ts = trial[:, [s1, s2]]
-    return pair_ts, (s1, s2), stationary
-
-def refine_run_data(data, N0,
-                    alpha=0.05, top_k=2, value="mean", abs_value=False):
-    pairs = []
-    series_ids = []
-    species_id = []
-    stationary_idx = []
-
+def pair_selection(data, pair, N0=0):
+    out = []
     for i, trial in enumerate(data):
-        pair, (s1, s2), stationarity_ = choose_pair(trial, alpha=alpha, top_k=top_k, value=value, abs_value=abs_value)
-        if pair is None:
-            continue
-        pairs.append((pair, N0+i)) 
-        series_ids.append(N0+i)
-        species_id.append((s1, s2))
-        stationary_idx.append(stationarity_)
-
-    meta = {"series_ids": series_ids, "species_id": species_id, "stationary_idx": stationary_idx}
-
-    return pairs, meta
-
-# test, test_meta = refine_run_data(data['data'][:100], N0=0, top_k=2)
-# for series in test:
-#     plot_timeseries_all_species(series[0], title = "top2 both")
-# pick top 2 because after looking, it seems that most of them are close to 0 after filtered
+        series = trial[:, pair]          # (T,2)
+        series_id = N0 + i               # global id
+        out.append((series, series_id))
+    return out
 
 def falsepos_datagen(pairs):
     n = len(pairs)
@@ -259,31 +177,20 @@ if __name__=="__main__":
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
+    pair = [9,23]
     
     # Pair-selection / stationarity settings (single source of truth)
-    alpha = 0.05
-    top_k = 2
-    value = "mean"
-    abs_value = False
-    data, meta = refine_run_data(data=data, N0=N0,
-                                 alpha=alpha, top_k=top_k, value=value, abs_value=abs_value)
+    data = pair_selection(data=data, pair=pair, N0=N0)
     data = falsepos_datagen(data)
     
     log.info(
-        "FALSEPOS Running: folder=%s, file=%s.pkl, range=[%d:%d), tests=%s, stats=%s, nsurr=%d, maxlag=%d FALSEPOS | " 
-        "FALSEPOS Kept %d/%d trials after stationarity filter FALSEPOS", 
-        folder_name, file_name, N0, N0 + batch_N, test_list, stats_list, nsurr, maxlag, len(data), batch_N)
+        "FALSEPOS Running: folder=%s, file=%s.pkl, range=[%d:%d), tests=%s, stats=%s, nsurr=%d, maxlag=%d FALSEPOS | ", 
+        folder_name, file_name, N0, N0 + batch_N, test_list, stats_list, nsurr, maxlag)
     
     
-    test_config = { "stationarity_filter": { "method": "ADF+KPSS",
-                                            "alpha": alpha,
-                                            "regression": "c",
-                                            "autolag": "AIC",
-                                            "nlags": "auto"
+    test_config = { "stationarity_filter": { "method": "fixed_pair"
                                             },
-                   "pair_selection": { "top_k": top_k,
-                                      "value": value,
-                                      "abs_value": abs_value,
+                   "pair_selection": { "pair": pair
                                       },
                    "surrogate_test": { "stats_list": stats_list,
                                       "test_list": test_list,
@@ -296,10 +203,12 @@ if __name__=="__main__":
                              }
                    }
     saveP = {'test_config': test_config,
-             'data_meta': meta}
+             'datagen_params': datagen_params}
     
     out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"{N0}_FALSEPOS")
-    fiS = f'{get_sample_dir(folder_name)}/{out_name}'
+    out_dir = get_sample_dir(folder_name)
+    os.makedirs(out_dir, exist_ok=True)
+    fiS = f"{out_dir}/{out_name}"
     log.info(f'Saving at {fiS}')
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);

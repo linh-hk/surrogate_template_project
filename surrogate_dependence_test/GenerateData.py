@@ -7,7 +7,6 @@ Created on Mon Nov 21 16:19:27 2022
 #%% Import libraries
 import logging
 log = logging.getLogger(__name__)
-# import numpy as np
 # import pandas as pd
 import scipy as sp
 from scipy.integrate import solve_ivp
@@ -74,7 +73,7 @@ def generate_logistic_map(length):
     x[0] = np.random.beta(0.5, 0.5);
     for i in range(length):
         x[i+1] = 4*x[i]*(1-x[i]);
-    return x;
+    return x[1:];
 
 def generate_sine_w_noise(length):
     log.info('Generating sine wave with noise')
@@ -186,10 +185,10 @@ def generate_discrete_FitzHugh_Nagumo(size, delta_t = 0.05):
 def generate_random_walk(length):
     log.info('Generating random walk')
     epsilon = np.random.standard_normal(length)
-    x = np.zeros(length)
+    x = np.zeros(length + 1)
     for t in range(length):
-        x[t+1] = x[t] + epsilon
-    return x
+        x[t+1] = x[t] + epsilon[t]
+    return x[1:]
 
 def generate_ar1_w_trend(length):
     log.info('Generating AR1 with trend')
@@ -348,8 +347,17 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T,
 
     # return [x[:,_] for _ in [0,1]] # for 2 species
     return x # for multispecies
-    # return s # checking the dynamic
-
+    # return s # checking the full dynamic
+#%% Caroline equally competitive matrix generation
+def im_equalinterxn_M(S, diag=-0.4, offdiag=-0.05, dtype=float):
+    """
+    Equal-interaction gLV matrix.
+    - diag: self-interaction M_ii (should be negative for self-limitation)
+    - offdiag: interaction M_ij for i!=j (negative = competition, positive = mutualism)
+    """
+    M = np.full((S, S), offdiag, dtype=dtype)
+    np.fill_diagonal(M, diag)
+    return M
 #%% Vano 4-species strange attractor
 mu_vano = np.array([1, 0.72, 1.53, 1.27])
 M_vano = np.array([[1,    1.09, 1.52, 0   ],
@@ -401,11 +409,40 @@ def initial_conditions_s0(S):
     # in this study, I don't propagate the culture so I'm randomly generating initial condition
     return np.random.uniform(0.0, 1.0, size=S)
 
-def intrinsic_growth_vector_mu(S):
-    # S : number of species in community. Returns vector of 1s with S entries
-    return np.ones(S)
+def intrinsic_growth_vector_mu(S, val=None, rng=None):
+    """
+    Generate intrinsic growth rate vector mu.
 
-##### Polo Matlab extracted ver - May's work
+    Parameters
+    ----------
+    S : int
+        Number of species.
+    val : None | float | array-like | "random"
+        - None       → mu_i = 1 for all i
+        - float      → mu_i = val for all i
+        - array-like → user-specified mu (length must be S)
+        - "random"   → random positive mu_i (guaranteed non-zero)
+    rng : np.random.Generator or None
+        Optional RNG for reproducibility.
+
+    Returns
+    -------
+    mu : np.ndarray, shape (S,)
+    """
+    rng = np.random.default_rng() if rng is None else rng
+
+    if val is None:
+        # Default: all ones (your current behaviour)
+        mu = np.ones(S)
+    elif isinstance(val, (int, float)):
+        # Constant growth rate
+        mu = np.full(S, float(val))
+    elif isinstance(val, str):
+        # Random but strictly positive (avoid zero-growth species)
+        mu = rng.uniform(low=0.5, high=1.5, size=S)
+    return mu
+
+#%%% Polo Matlab extracted ver - May's work
 '''
     Construct interaction matrix M.
     May's ecological stability theory. For a GLV or random large ecological network, if interaction coefficients scale like 1/sqrt(S), the system has well-defined stability threshold
@@ -458,7 +495,7 @@ def im_may_M(S, meanmu=30.0, sigma=4.0, gamma=-0.5, rng=None):
     A  = A1u + A2u.T + np.eye(S)  # symmetric-ish + self = 1
     return -A
 
-##### Akshit multistability
+#%%% Akshit multistability
 '''
     + symmetric matrix can not lead to chaos.
     + https://arxiv.org/pdf/2511.06697
@@ -680,3 +717,76 @@ if __name__=="__main__":
     for i in range(100):
         test.append(generate_lv(ARGs['dt_s'], ARGs['N'], ARGs['s0'], ARGs['mu'], ARGs['M'], ARGs['noise'], ARGs['noise_T']))
         
+    #%% Caroline suggestion multiple equally competitive species
+    import pickle
+    import os
+    os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Extended/')
+    
+    def save_data(filename, data, tag = '', foldername = 'LVextra'):
+        os.makedirs(foldername, exist_ok= True)
+        filepath = foldername + '/data_' + filename + '_' + tag + '.pkl'
+        with open(filepath, 'wb') as fi:
+            pickle.dump(data, fi)
+            
+    def load_data(folder_name=None, file_name = 'data'):
+        with open(f'{folder_name}/{file_name}.pkl', 'rb') as fi:
+            data = pickle.load(fi)
+        return data
+    
+    #%%%
+    n_species = 50
+    mu = intrinsic_growth_vector_mu(S=n_species, val=0.7)
+    M = im_equalinterxn_M(S=n_species, diag=-0.4, offdiag=-0.5)
+    ARGs={'mode': 'multiple_equally_competitive_species', 
+                 'n_species': n_species,
+                 'dt_s': 0.25, 
+                 'N': 500,
+                 # 's0': s0,
+                 'mu': mu,
+                 'M': M,
+                 'noise': 0.001, # tested for 0.001, 9.005 and 0.0025, they squiggled more wildly but none that is as crazy as before Akshit and friend. : )
+                 'noise_T': 0.05}
+    
+    s0s = []
+    
+    test = []
+    for i in range(20):
+        # s0 = initial_conditions_s0(n_species)
+        # s0s.append(s0)
+        s0 = s0s[i]
+        test.append(generate_lv(dt_s=ARGs['dt_s'], N=ARGs['N'], s0=s0, mu=mu, M=M, noise=0.0, noise_T=ARGs['noise_T']))
+        
+    save = {"s0s": s0s,
+            "ARGs": ARGs,
+            "data": test}
+    save_data("test_0.7_0.4_0.5", save, tag='longer', foldername = 'multispecies_explore/multiecomp')
+    del save
+    # load_data(folder_name="multispecies_explore/multiecomp",file_name="test_0.7_0.4_0.5")
+    #%% 
+    test_7_4_5 = load_data(folder_name="multispecies_explore/multiecomp",file_name="data_test_0.7_0.4_0.5_shorter") 
+    s0s = test_7_4_5['s0s']
+    n_species = 50
+    mu = intrinsic_growth_vector_mu(S=n_species, val=0.7)
+    M = im_equalinterxn_M(S=n_species, diag=-0.4, offdiag=-0.5)
+    ARGs={'mode': 'multiple_equally_competitive_species', 
+                 'n_species': n_species,
+                 'dt_s': 0.25, 
+                 'N': 1000,
+                 # 's0': s0,
+                 'mu': mu,
+                 'M': M,
+                 'noise': 0.001, # tested for 0.001, 9.005 and 0.0025, they squiggled more wildly but none that is as crazy as before Akshit and friend. : )
+                 'noise_T': 0.05}
+    
+    test = []
+    for i in range(20):
+        # s0 = initial_conditions_s0(n_species)
+        # s0s.append(s0)
+        s0 = s0s[i]
+        test.append(generate_lv(dt_s=ARGs['dt_s'], N=ARGs['N'], s0=s0, mu=mu, M=M, noise=0.0, noise_T=ARGs['noise_T']))
+        
+    save = {"s0s": s0s,
+            "ARGs": ARGs,
+            "data": test}
+    save_data("test_0.7_0.4_0.5", save, tag='longer', foldername = 'multispecies_explore/multiecomp')
+    del save
