@@ -41,6 +41,14 @@ sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_depend
 from GenerateData import generate_lv
 from multiprocessor import Multiprocessor
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
+
 def load_streamed_data(tmp_file):
     data = []
     with open(tmp_file, "rb") as f:

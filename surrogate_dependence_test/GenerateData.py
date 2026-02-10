@@ -316,7 +316,7 @@ def lotkaVolterraSat(t,y,mu,M,K):
 def generate_lv(dt_s, N, s0, mu, M, noise, noise_T, 
                 time_skip = 250, 
                 fn = lotkaVolterra, measurement_noise = 0): # ,intx="competitive"
-    log.info('Generating Caroline Lotka-Volterra model')
+    log.info('Generating generalised Lotka-Volterra model')
     dt=0.05; # integration step
     lag = int(time_skip/dt) # int(150/dt) # 30000
     sample_period = int(np.ceil(dt_s / dt)); 
