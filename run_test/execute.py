@@ -175,6 +175,7 @@ if __name__=="__main__":
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
     pair = [5,7]
+    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"s0_5_{N0}")
     
     # Pair-selection / stationarity settings (single source of truth)
     data = pair_selection(data=data, pair=pair, N0=N0)
@@ -199,7 +200,6 @@ if __name__=="__main__":
     saveP = {'test_config': test_config,
              'datagen_params': datagen_params}
     
-    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=str(N0))
     out_dir = get_sample_dir(folder_name)
     os.makedirs(out_dir, exist_ok=True)
     fiS = f"{out_dir}/{out_name}"
