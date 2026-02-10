@@ -174,7 +174,7 @@ if __name__=="__main__":
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
-    pair = [9,23]
+    pair = [5,7]
     
     # Pair-selection / stationarity settings (single source of truth)
     data = pair_selection(data=data, pair=pair, N0=N0)
