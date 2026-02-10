@@ -1,6 +1,6 @@
 #$ -l tmem=16G
 #$ -l h_vmem=16G
-#$ -l h_rt=15:00:00
+#$ -l h_rt=05:00:00
 #$ -pe smp 16
 #$ -R y
 
