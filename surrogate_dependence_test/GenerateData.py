@@ -237,7 +237,7 @@ def sc_prime_rsrc(t, y, num_spec, r0, K, alpha, beta, rho_plus, rho_minus,r_flux
 
 # Caroline sent: run nonlinearity test, Linh modified to only generate ts
 def generate_niehaus(run_id, dt_s, N, noise, noise_T, intx="competitive"):
-    log.info('Generating Caroline bacterial chemically regulated model')
+    log.info('Generating bacterial chemically regulated model')
     dt=0.05;
     sample_period = int(np.ceil(dt_s / dt));
     
@@ -296,7 +296,7 @@ def generate_niehaus(run_id, dt_s, N, noise, noise_T, intx="competitive"):
 #%%% Caroline AR
 # AR model for control
 def ar_control(noise=1.0):
-    log.info('Generating Caroline AR model for control')
+    log.info('Generating AR model for control')
     x = np.zeros(601);
     for i in range(600):
         x[i+1] = 0.8*x[i] + noise*np.random.randn();

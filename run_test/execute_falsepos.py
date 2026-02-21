@@ -9,9 +9,9 @@ Run surrogate dependence tests on simulated time-series batches on SGE.
 
 Qsub passes args to python:
 
-qsub    ...             {cor_stat}      {surr_proc}     {folder_name}     {file_name}    {N_0}           
-qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]
-qsub    qsub.sh         a               a               multispecies    fina wo .pkl    0
+qsub    ...             {cor_stat}      {surr_proc}     {folder_name}     {file_name}    {N_0}          {pair}           
+qsub    sys.argv[0]     sys.argv[1]     sys.argv[2]     sys.argv[3]     sys.argv[4]     sys.argv[5]     sys.argv[6]
+qsub    qsub.sh         a               a               multispecies    data.pkl        0               "5,7"
 
 Arguments:
     cor_stat: string of statistic initials
@@ -33,6 +33,7 @@ Arguments:
     folder_name: folder under Simulated_data/ (or Simulated_data/LVextra/)
     file_name:   base filename (without .pkl)
     N0:          start index into the stored list of simulations
+    pair:       (optional) for multiplespecies
 
 This script runs on SGE on UCL cluster:
     Load simulated data that is in ../Simulated_data(/LVextra)/folder_name/file_name        
@@ -112,6 +113,10 @@ def parse_testlist(sys_arg):
             test_list.append('randphase')
         return test_list
 
+def parse_pair(s):
+    a, b = s.split(",")
+    return [int(a), int(b)]
+
 def get_sample_dir(folder_name):
     base = "Simulated_data/LVextra" if "500" in folder_name else "Simulated_data"
     return f"{base}/{folder_name}"
@@ -159,16 +164,17 @@ if __name__=="__main__":
     
     # test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
     log.info(f'working directory: {os.getcwd()}')
-    if len(sys.argv) != 6:
+    if len(sys.argv) < 6:
         raise SystemExit(
-            "Expected 5 arguments: cor_stat surr_proc folder_name file_name N0\n"
-            "Example: qsub execute_run_tests.py plm nr myfolder data_foo 0"
+            "Expected 5 arguments: cor_stat surr_proc folder_name file_name N0 (pair)\n"
+            "Example: qsub execute_run_tests.py plm nr myfolder data_foo 0 \"5,7\""
         )
     stats_list = parse_corstat(sys.argv[1])  
     test_list = parse_testlist(sys.argv[2])
     folder_name = sys.argv[3]
     file_name = sys.argv[4]
     N0 = int(sys.argv[5])
+    pair = parse_pair(sys.argv[6]) if len(sys.argv) == 7 else [0,1]
     
     # Defaults
     maxlag = 0
@@ -177,7 +183,6 @@ if __name__=="__main__":
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
-    pair = [5,7]
     out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"s0_5_{N0}_FALSEPOS")
     
     # Pair-selection / stationarity settings (single source of truth)

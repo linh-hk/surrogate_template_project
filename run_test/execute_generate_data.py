@@ -18,6 +18,14 @@ Integrated multiprocessor into the workflow ('new' in file name)
 This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
 
 """
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
+
 import os
 print(f'working directory: {os.getcwd()}')
 # os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
@@ -40,14 +48,6 @@ sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_depend
 # sys.path.append('/home/h_k_linh/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/Simulation_code/surrogate_dependence_test')
 from GenerateData import generate_lv
 from multiprocessor import Multiprocessor
-
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-log = logging.getLogger(__name__)
 
 def load_streamed_data(tmp_file):
     data = []
