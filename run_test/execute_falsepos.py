@@ -69,6 +69,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 # Optional: silence chatty libraries
 logging.getLogger("statsmodels").setLevel(logging.WARNING)
+import traceback
 
 # from mpi4py.futures import MPIPoolExecutor
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
@@ -157,9 +158,18 @@ def run_each_ts(series, series_id, stats_list, test_list, maxlag, nsurr,
     x = series[:, 0]
     y = series[:, 1]
     # manystats_manysurr(x, y, stats_list='all', test_list='all', maxlag=0, steplag=1, n_surr=99, kw_randphase={}, kw_twin={}, r_tts=choose_r, kw_statistic={})
-    res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr,
-                                 nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
-    return {series_id: res}
+    try:
+        res = sdt.manystats_manysurr(x=x, y=y, stats_list=stats_list, test_list=test_list, maxlag=maxlag, n_surr=nsurr,
+                                     nproc_scan=nproc_scan, nproc_ccm=nproc_ccm, nproc_embed=nproc_embed)
+        return {series_id: res}
+    except Exception as e:
+        log.error(f"FAILED series_id={series_id}")
+        log.error(traceback.format_exc())
+
+        return {
+            "FAILED": series_id,
+            "error": str(e)
+        }
 if __name__=="__main__":
     
     # test_list = [sys.argv[2] if 'tts' not in sys.argv[2] else 'tts_naive'] # , 'twin','randphase'
@@ -176,6 +186,10 @@ if __name__=="__main__":
     N0 = int(sys.argv[5])
     pair = parse_pair(sys.argv[6]) if len(sys.argv) == 7 else [0,1]
     
+    import re
+    s0_match = re.search(r's0_\d+', file_name)
+    s0 = s0_match.group() if s0_match else "s0_unknown"
+    
     # Defaults
     maxlag = 0
     nsurr = 99
@@ -183,7 +197,7 @@ if __name__=="__main__":
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
-    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"s0_5_{N0}_FALSEPOS")
+    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"{s0}_{N0}_FALSEPOS")
     
     # Pair-selection / stationarity settings (single source of truth)
     data = pair_selection(data=data, pair=pair, N0=N0)
