@@ -330,6 +330,7 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T,
     for i in range(lag + obs):
         soln = solve_ivp(fn,[0,dt],s[i],args=args)
         '''
+        soln = solve_ivp(lotkaVolterra,[0,dt],s[i],args=(mu+a*(s[i] < 0.05),M)) # a = 0.2
         x_i = x_i + x* + sqrt(x_i)*eps_i with eps_i~Normal distribution
         '''
         eps_ = np.sqrt(np.maximum(soln.y[:, -1], 0.0 )) # recommended = nitesh and akshit, makes extinct species stay extinct
