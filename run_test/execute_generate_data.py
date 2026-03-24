@@ -18,14 +18,6 @@ Integrated multiprocessor into the workflow ('new' in file name)
 This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
 
 """
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-log = logging.getLogger(__name__)
-
 import os
 print(f'working directory: {os.getcwd()}')
 # os.chdir('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/')
@@ -42,6 +34,15 @@ import time
 import pickle # load and save data
 
 # from mpi4py.futures import MPIPoolExecutor
+
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | PID=%(process)d | T=%(threadName)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
+
 
 sys.path.append('/home/hoanlinh/Simulation_test/Simulation_code/surrogate_dependence_test')
 # sys.path.append('D:/OneDrive/Desktop/UCL_MRes_Biosciences_2022/MyProject/Simulation_test/Simulation_code/surrogate_dependence_test')
@@ -68,6 +69,7 @@ def save_data(filename, data, tag = '', foldername = 'LVextra'):
         
 def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, seed):
     # print((os.getpid() * int(time.time())) % 123456789)
+    s0 = s0.copy()
     np.random.seed(seed) # (os.getpid() * int(time.time())) % 123456789
     return generate_lv(dt_s=dt_s, N=N, s0=s0, mu=mu, M=M, noise=noise, noise_T=noise_T, time_skip = time_skip)
 #%%
@@ -75,31 +77,27 @@ if __name__ == '__main__':
     
     # Multispecies, multistability, no chaos with process noise
     ## one matrix, 20 random initial condition
-    from GenerateData import intrinsic_growth_vector_mu, multistability_crit, im_symmetric_M, initial_conditions_s0
-    mat_num = sys.argv[1]
+    from GenerateData import intrinsic_growth_vector_mu# , multistability_crit, im_symmetric_M, initial_conditions_s0
     noise = 0.001
     n_species = 50
     mu = intrinsic_growth_vector_mu(n_species)
-    meanmu = 0.5
-    sigma_crit = multistability_crit(meanmu, n_species) # 0.05
-    sigma = 0.3
-    M = im_symmetric_M(S=n_species, meanmu=meanmu, sigma=sigma)
-    datagen_params = {'mode': f"multispecies_M{mat_num}",
+    M = np.load('multispecies_parameters/found_matrix.npy')
+    datagen_params = {'mode': "multispecies_M_found",
                       'n_species': n_species,
                       'N': 500,
                       'dt_s': 0.25, 
                       'noise': noise,
                       'noise_T': 0.05,
                       'mu': mu,
-                      'meanmu': meanmu,
-                      'sigma': sigma,
+                      # 'meanmu': meanmu,
+                      # 'sigma': sigma,
                       'M': M,
                       'time_skip': 250}
     
     start = time.time()
-    for s0_i in range(20): # run 20 random s0
+    for i in ['A', 'B']: # run 20 random s0
         trial_start_time = time.time()
-        datagen_params['s0'] = initial_conditions_s0(datagen_params['n_species'])
+        datagen_params['s0'] = np.load(file=f'multispecies_parameters/initial_condition_{i}.npy')
 
         reps = 1000
         ARGS_ = (datagen_params['dt_s'], 
@@ -111,10 +109,10 @@ if __name__ == '__main__':
                  datagen_params['noise_T'], 
                  datagen_params['time_skip'])
         
-        tmp_file = f"temp_{datagen_params['mode']}_s0{s0_i}_pid{os.getpid()}.pkl"
+        tmp_file = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}.pkl"
         mp = Multiprocessor(output_file=tmp_file)
         for rep in range(reps):
-            seed = (1234567 + s0_i*10007 + rep) % (2**32 - 1)   # reproducible
+            seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1)   # reproducible
             mp.add(iter_generatelv, ARGS_ + (seed,))
         mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
         # data = mp.results()
@@ -125,13 +123,13 @@ if __name__ == '__main__':
                                    s0=datagen_params['s0'], 
                                    mu=datagen_params['mu'], 
                                    M=datagen_params['M'], 
-                                   noise=0.0, 
+                                   noise=0.00, 
                                    noise_T=datagen_params['noise_T'], 
                                    time_skip=datagen_params['time_skip'])
         
         runtime = time.time() - trial_start_time
         # filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
-        filename = '_'.join([datagen_params['mode'], f"s0_{s0_i}", 'noise', str(datagen_params['noise'])])
+        filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
         params_to_save = dict(datagen_params)      # shallow copy
         params_to_save['s0'] = datagen_params['s0'].copy()
         savethis = {'no_noise': no_noise,

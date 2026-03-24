@@ -1,5 +1,5 @@
-#$ -l tmem=64G
-#$ -l h_vmem=64G
+#$ -l tmem=2G
+#$ -l h_vmem=2G
 #$ -l h_rt=03:00:00
 #$ -pe smp 8
 #$ -R y
@@ -8,11 +8,11 @@
 
 #$ -S /bin/bash
 #$ -j y
-#$ -N "generate_data_multispecies_symcomp"
+#$ -N "generate_data_multispecies"
 
 #$ -cwd
 
 #The code you want to run now goes here.
 hostname
 date
-python3 -u Simulation_code/run_test/execute_generate_data.py $1
+python3 -u Simulation_code/run_test/execute_generate_data.py
