@@ -333,9 +333,9 @@ def generate_lv(dt_s, N, s0, mu, M, noise, noise_T,
         soln = solve_ivp(lotkaVolterra,[0,dt],s[i],args=(mu+a*(s[i] < 0.05),M)) # a = 0.2
         x_i = x_i + x* + sqrt(x_i)*eps_i with eps_i~Normal distribution
         '''
-        eps_ = np.sqrt(np.maximum(soln.y[:, -1], 0.0 )) # recommended = nitesh and akshit, makes extinct species stay extinct
-        eps = eps_*noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n)
-        # eps = noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n); # process noise/external perturbation = allow migration over time.
+        # eps_ = np.sqrt(np.maximum(soln.y[:, -1], 0.0 )) # recommended = nitesh and akshit, makes extinct species stay extinct
+        # eps = eps_*noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n)
+        eps = noise*np.random.randn(n)*np.random.binomial(1,dt/noise_T,size=n); # process noise/external perturbation = allow migration over time.
         # s[i+1] = soln.y[:,-1] + eps; # print(s[i+1])
         # s[i+1][np.where(s[i+1] < 0)] = 0;
         nxt = soln.y[:, -1] + eps
