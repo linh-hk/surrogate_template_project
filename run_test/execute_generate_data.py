@@ -67,14 +67,51 @@ def save_data(filename, data, tag = '', foldername = 'LVextra'):
     with open(filepath, 'wb') as fi:
         pickle.dump(data, fi)
         
-def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, seed):
+from statsmodels.tsa.stattools import adfuller, kpss
+
+def adf_p(x, regression="c", autolag="AIC", maxlag=None):
+    x = np.asarray(x, dtype=float)
+    return adfuller(x, regression=regression, autolag=autolag, maxlag=maxlag)[1]
+
+def kpss_p(x, regression="c", nlags="auto"):
+    x = np.asarray(x, dtype=float)
+    return kpss(x, regression=regression, nlags=nlags)[1]
+
+def stationary_evaluate(X, alpha=0.05, regression="c", 
+                        autolag="AIC", maxlag=None, 
+                        nlags="auto"):
+    """
+    X: (T,S)
+    Returns boolean mask (S,) for species that are stationary over the whole window:
+      ADF p < alpha  AND  KPSS p > alpha
+    """
+    X = np.asarray(X, dtype=float)
+    S = X.shape[1]
+    mask = np.zeros(S, dtype=bool)
+
+    for s in range(S):
+        x = X[:, s]
+        p_adf = adf_p(x, regression=regression, autolag=autolag, maxlag=maxlag)
+        p_kpss = kpss_p(x, regression=regression, nlags=nlags)
+        mask[s] = (p_adf < alpha) and (p_kpss > alpha)
+
+    return mask
+
+def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, seed, sp_list):
     # print((os.getpid() * int(time.time())) % 123456789)
     s0 = s0.copy()
     np.random.seed(seed) # (os.getpid() * int(time.time())) % 123456789
-    return generate_lv(dt_s=dt_s, N=N, s0=s0, mu=mu, M=M, noise=noise, noise_T=noise_T, time_skip = time_skip)
+    series = generate_lv(dt_s=dt_s, N=N, s0=s0, mu=mu, M=M, noise=noise, noise_T=noise_T, time_skip = time_skip)
+    mask = stationary_evaluate(series[:, sp_list])
+    if mask.all():
+        return series
+    else:
+        return None
+
 #%%
 if __name__ == '__main__': 
     
+    sp_list = [24,39]
     # Multispecies, multistability, no chaos with process noise
     ## one matrix, 20 random initial condition
     from GenerateData import intrinsic_growth_vector_mu# , multistability_crit, im_symmetric_M, initial_conditions_s0
@@ -92,7 +129,8 @@ if __name__ == '__main__':
                       # 'meanmu': meanmu,
                       # 'sigma': sigma,
                       'M': M,
-                      'time_skip': 250}
+                      'time_skip': 250,
+                      'sp_list': sp_list}
     
     start = time.time()
     for i in ['A', 'B']: # run 20 random s0
@@ -111,13 +149,33 @@ if __name__ == '__main__':
         
         tmp_file = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}.pkl"
         mp = Multiprocessor(output_file=tmp_file)
+        data = []
         for rep in range(reps):
             seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1)   # reproducible
-            mp.add(iter_generatelv, ARGS_ + (seed,))
+            mp.add(iter_generatelv, ARGS_ + (seed, sp_list,))
         mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
         # data = mp.results()
-        data = load_streamed_data(tmp_file)
+        data_ = load_streamed_data(tmp_file) 
+        for dat in data_:
+            if dat is not None:
+                data.append(dat)
         
+        while len(data) < reps:
+            seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1) 
+            data_ = iter_generatelv(dt_s=datagen_params['dt_s'], 
+                                       N=datagen_params['N'], 
+                                       s0=datagen_params['s0'], 
+                                       mu=datagen_params['mu'], 
+                                       M=datagen_params['M'], 
+                                       noise=datagen_params['noise'], 
+                                       noise_T=datagen_params['noise_T'], 
+                                       time_skip=datagen_params['time_skip'],
+                                       seed = seed,
+                                       sp_list = datagen_params['sp_list'])
+            rep += 1
+            if data_ is not None:
+                data.append(data_)
+
         no_noise = generate_lv(dt_s=datagen_params['dt_s'], 
                                    N=datagen_params['N'], 
                                    s0=datagen_params['s0'], 
