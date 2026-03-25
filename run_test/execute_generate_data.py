@@ -60,6 +60,10 @@ def load_streamed_data(tmp_file):
                 break
     return data
 
+def append_to_file(filename, obj):
+    with open(filename, "ab") as f:
+        pickle.dump(obj, f)
+
 def save_data(filename, data, tag = '', foldername = 'LVextra'):
     thispath = 'Simulated_data/'+ foldername + '/'
     os.makedirs(thispath, exist_ok= True)
@@ -132,12 +136,15 @@ if __name__ == '__main__':
                       'time_skip': 250,
                       'sp_list': sp_list}
     
+    reps = 1000
     start = time.time()
     for i in ['A', 'B']: # run 20 random s0
+        filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
+        if os.path.isfile(f"Simulated_data/multispecies/data_{filename}_{reps}.pkl"):
+            continue
         trial_start_time = time.time()
         datagen_params['s0'] = np.load(file=f'multispecies_parameters/initial_condition_{i}.npy')
 
-        reps = 1000
         ARGS_ = (datagen_params['dt_s'], 
                  datagen_params['N'], 
                  datagen_params['s0'], 
@@ -149,18 +156,23 @@ if __name__ == '__main__':
         
         tmp_file = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}.pkl"
         mp = Multiprocessor(output_file=tmp_file)
-        data = []
+        
         for rep in range(reps):
             seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1)   # reproducible
             mp.add(iter_generatelv, ARGS_ + (seed, sp_list,))
         mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
         # data = mp.results()
+        
+        tmp_file2 = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}2.pkl"
+        count = 0
         data_ = load_streamed_data(tmp_file) 
         for dat in data_:
             if dat is not None:
-                data.append(dat)
+                append_to_file(tmp_file2, dat)
+                count +=1
+        os.remove(tmp_file)
         
-        while len(data) < reps:
+        while count < reps:
             seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1) 
             data_ = iter_generatelv(dt_s=datagen_params['dt_s'], 
                                        N=datagen_params['N'], 
@@ -174,7 +186,8 @@ if __name__ == '__main__':
                                        sp_list = datagen_params['sp_list'])
             rep += 1
             if data_ is not None:
-                data.append(data_)
+                append_to_file(tmp_file2, data_)
+                count +=1
 
         no_noise = generate_lv(dt_s=datagen_params['dt_s'], 
                                    N=datagen_params['N'], 
@@ -185,9 +198,11 @@ if __name__ == '__main__':
                                    noise_T=datagen_params['noise_T'], 
                                    time_skip=datagen_params['time_skip'])
         
+        data = load_streamed_data(tmp_file2) 
+        
         runtime = time.time() - trial_start_time
         # filename = '_'.join([','.join([str(j) for j in _.flatten()]) if type(_) == type(np.array([[-0.4,-0.5],[-0.5,-0.4]])) else str(_) for _ in ARGS.values()])
-        filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
+        # filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
         params_to_save = dict(datagen_params)      # shallow copy
         params_to_save['s0'] = datagen_params['s0'].copy()
         savethis = {'no_noise': no_noise,
@@ -196,7 +211,7 @@ if __name__ == '__main__':
                     'runtime': runtime}
         
         save_data(filename, savethis, tag=str(reps), foldername = 'multispecies')
-        os.remove(tmp_file)
+        os.remove(tmp_file2)
         del ARGS_, data, no_noise, savethis
 
     sys.stdout.flush();
