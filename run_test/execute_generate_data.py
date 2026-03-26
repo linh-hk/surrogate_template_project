@@ -142,6 +142,7 @@ if __name__ == '__main__':
         filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
         if os.path.isfile(f"Simulated_data/multispecies/data_{filename}_{reps}.pkl"):
             continue
+        log.info(f'Saving at {filename}')
         trial_start_time = time.time()
         datagen_params['s0'] = np.load(file=f'multispecies_parameters/initial_condition_{i}.npy')
 

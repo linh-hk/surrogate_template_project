@@ -184,7 +184,7 @@ if __name__=="__main__":
     pair = parse_pair(sys.argv[6]) if len(sys.argv) == 7 else [0,1]
     
     import re
-    s0_match = re.search(r's0_\d+', file_name)
+    s0_match = re.search(r's0_([^_]+)', file_name) 
     s0 = s0_match.group() if s0_match else "s0_unknown"
     
     # Defaults
