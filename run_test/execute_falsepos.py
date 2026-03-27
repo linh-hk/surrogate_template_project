@@ -228,7 +228,12 @@ if __name__=="__main__":
     out_dir = get_sample_dir(folder_name)
     os.makedirs(out_dir, exist_ok=True)
     fiS = f"{out_dir}/{out_name}"
+    if os.path.isfile(fiS):
+        raise SystemExit(
+            f'File {fiS} already existed. Please delete or recheck'
+        )
     log.info(f'Saving at {fiS}')
+    
     with open(fiS, 'wb') as file:
         pickle.dump(saveP, file);
     start = time.time()

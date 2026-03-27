@@ -123,7 +123,7 @@ if __name__ == '__main__':
     n_species = 50
     mu = intrinsic_growth_vector_mu(n_species)
     M = np.load('multispecies_parameters/found_matrix.npy')
-    datagen_params = {'mode': "multispecies_M_found",
+    datagen_params = {'mode': "multispecies_M_found_GB",
                       'n_species': n_species,
                       'N': 500,
                       'dt_s': 0.25, 
@@ -134,7 +134,8 @@ if __name__ == '__main__':
                       # 'sigma': sigma,
                       'M': M,
                       'time_skip': 250,
-                      'sp_list': sp_list}
+                      'sp_list': sp_list,
+                      "a_GB": 0.025}
     
     reps = 1000
     start = time.time()
