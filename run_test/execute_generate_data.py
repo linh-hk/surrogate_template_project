@@ -101,10 +101,10 @@ def stationary_evaluate(X, alpha=0.05, regression="c",
 
     return mask
 
-def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, seed, sp_list):
+def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, sp_list):
     # print((os.getpid() * int(time.time())) % 123456789)
     s0 = s0.copy()
-    np.random.seed(seed) # (os.getpid() * int(time.time())) % 123456789
+    np.random.seed(None)
     series = generate_lv(dt_s=dt_s, N=N, s0=s0, mu=mu, M=M, noise=noise, noise_T=noise_T, time_skip = time_skip)
     mask = stationary_evaluate(series[:, sp_list])
     if mask.all():
@@ -137,6 +137,8 @@ if __name__ == '__main__':
                       'sp_list': sp_list,
                       "a_GB": 0.025}
     
+    resume_file = sys.argv[1] if len(sys.argv) > 1 else None
+    
     reps = 1000
     start = time.time()
     for i in ['A', 'B']: # run 20 random s0
@@ -156,26 +158,34 @@ if __name__ == '__main__':
                  datagen_params['noise_T'], 
                  datagen_params['time_skip'])
         
-        tmp_file = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}.pkl"
-        mp = Multiprocessor(output_file=tmp_file)
+        if resume_file is not None and f"s0_{i}" in resume_file:
+            tmp_file2 = resume_file
+            data_ = load_streamed_data(tmp_file2) 
+            count = len(data_)
+            rep = count
+            log.info(f"Continue run from {tmp_file2} at count {count}")
         
-        for rep in range(reps):
-            seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1)   # reproducible
-            mp.add(iter_generatelv, ARGS_ + (seed, sp_list,))
-        mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
-        # data = mp.results()
-        
-        tmp_file2 = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}2.pkl"
-        count = 0
-        data_ = load_streamed_data(tmp_file) 
-        for dat in data_:
-            if dat is not None:
-                append_to_file(tmp_file2, dat)
-                count +=1
-        os.remove(tmp_file)
+        else:
+            tmp_file = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}.pkl"
+            mp = Multiprocessor(output_file=tmp_file)
+            
+            for rep in range(reps):
+                # reproducible
+                mp.add(iter_generatelv, ARGS_ + (sp_list,))
+            mp.run(4) # can only work up to 6. 7 and 8 will freeze the laptop
+            # data = mp.results()
+            del rep
+            
+            tmp_file2 = f"temp_{datagen_params['mode']}_s0_{i}_pid{os.getpid()}2.pkl"
+            count = 0
+            data_ = load_streamed_data(tmp_file) 
+            for dat in data_:
+                if dat is not None:
+                    append_to_file(tmp_file2, dat)
+                    count +=1
+            os.remove(tmp_file)
         
         while count < reps:
-            seed = (1234567 + ord(i)*10007 + rep) % (2**32 - 1) 
             data_ = iter_generatelv(dt_s=datagen_params['dt_s'], 
                                        N=datagen_params['N'], 
                                        s0=datagen_params['s0'], 
@@ -184,9 +194,7 @@ if __name__ == '__main__':
                                        noise=datagen_params['noise'], 
                                        noise_T=datagen_params['noise_T'], 
                                        time_skip=datagen_params['time_skip'],
-                                       seed = seed,
                                        sp_list = datagen_params['sp_list'])
-            rep += 1
             if data_ is not None:
                 append_to_file(tmp_file2, data_)
                 count +=1
