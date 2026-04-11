@@ -504,7 +504,7 @@ def im_may_M(S, meanmu=30.0, sigma=4.0, gamma=-0.5, rng=None):
     + symmetric matrix can not lead to chaos.
     + https://arxiv.org/pdf/2511.06697
     + how easy it is to know the threshold for stochasticity?
-    + Akshit says noone knows that so we have to tune the schochasticity in slowly
+        + Akshit says noone knows that so we have to tune the schochasticity in slowly
     + non zeros entries will create the same outcome as discussed
     + what we observed from the 50 species seed(0) is chaos
     ----------

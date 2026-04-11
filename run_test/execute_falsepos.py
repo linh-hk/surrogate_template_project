@@ -143,8 +143,16 @@ def name_output(choose_name, cor_stat_arg='a', test_list_arg='a', maxlag=0, note
 def pair_selection(data, pair, N0=0):
     out = []
     for i, trial in enumerate(data):
-        series = trial[:, pair]          # (T,2)
-        series_id = N0 + i               # global id
+        # CASE 1: list of [x, y]
+        if isinstance(trial, list):
+            series = np.column_stack(trial)   # (T, 2)
+        # CASE 2: full matrix (T, N)
+        else:
+            series = trial[:, pair]           # (T, 2)
+        # TEMP FIX: old data has 501 timepoints → trim to 500
+        if series.shape[0] == 501:
+            series = series[:500]
+        series_id = N0 + i
         out.append((series, series_id))
     return out
 

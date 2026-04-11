@@ -6,16 +6,23 @@ Created on Mon May 29 18:15:37 2023
 @author: h_k_linh
 
 This script is submited to SGE on UCL cluster as a task. 
-What it does is:
-    Load simulated data that is in ../Simulated_data
-        Which data to load is using the first argument passed from qsub script.
-        The second argument from the qsub script specifies which pairs of time series (index of simulated data) will be run. This came about because I simulated 1000 simulations in total and only want to run test on 100 simulations per run.
-    Run the dependence test on the data in parallel and save results on cluster.
-Note:
-This script particularly use the tts protocol to general surrogate test
-The imported data is not changed to test for false positive rate in this script
-Integrated multiprocessor into the workflow ('new' in file name)
-This script uses multiprocessor to excecute on cluster, rather than MPI4py ('2' in file name)
+========================= IMPORTANT WARNING =========================
+This script assumes multispecies mode by default:
+  - s0_list = ['A','B']
+  - s0 is loaded from file (initial_condition_*.npy)
+
+If you switch to other models (EComp, EMut, UComp, Vano, etc.):
+  1. Comment out the multispecies block
+  2. Uncomment the desired datagen_params
+  3. Adjust s0 handling:
+      - If s0 is defined in datagen_params → DO NOT overwrite it
+      - If using Vano → replace s0_list with your own list of arrays
+  4. Update filename logic if needed (since s0 is no longer 'A'/'B')
+
+Failure to do this will cause:
+  - incorrect s0 being used
+  - crashes or silent logical errors
+=====================================================================
 
 """
 import os
@@ -114,15 +121,66 @@ def iter_generatelv(dt_s, N, s0, mu, M, noise, noise_T, time_skip, sp_list):
 
 #%%
 if __name__ == '__main__': 
+    # 2-species gLV, predator-prey
+    # # EComp
+    # datagen_params = {'mode': 'EComp_Fast_20', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'EComp_Slow_20', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'EComp_Fast_11', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,-0.5],[-0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # # EMut
+    # datagen_params = {'mode': 'EMut_Fast_20', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,0.3],[0.3,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'EMut_Slow_20', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,0.3],[0.3,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'EMut_Fast_11', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,0.3],[0.3,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'EMut_Slow_11', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.7,0.7]), 'M': np.array([[-0.4,0.5],[0.5,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # # UComp
+    # datagen_params = {'mode': 'UComp_Fast_20', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-0.4,-0.5],[-0.9,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp_Slow_20', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-0.4,-0.5],[-0.9,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp_Fast_11', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-0.4,-0.5],[-0.9,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp_Slow_11', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-0.4,-0.5],[-0.9,-0.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # # UComp2
+    # datagen_params = {'mode': 'UComp2_Fast_20', 'dt_s': 0.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-1.4,-0.5],[-0.9,-1.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp2_Slow_20', 'dt_s': 1.25, 'N': 500, 's0': np.array([2.,0.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-1.4,-0.5],[-0.9,-1.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp2_Fast_11', 'dt_s': 0.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-1.4,-0.5],[-0.9,-1.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # datagen_params = {'mode': 'UComp2_Slow_11', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([0.8,0.8]), 'M': np.array([[-1.4,-0.5],[-0.9,-1.4]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+    # # Pred-prey
+    # datagen_params = {'mode': 'predprey', 'dt_s': 1.25, 'N': 500, 's0': np.array([1.,1.]), 'mu': np.array([1.1,-0.4]), 'M': np.array([[0.0,-0.4],[0.1,0.0]]), 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': [0,1]}
+
+    # # 4-species, Vano
+    # sp_list = [0,1]
+    # r = np.array([1, 0.72, 1.53, 1.27])
+    # A = np.array([[1, 1.09, 1.52, 0],
+    #               [0, 1, 0.44, 1.36],
+    #               [2.33, 0, 1, 0.47],
+    #               [1.21, 0.51, 0.35, 1]])
+    # mu = r.copy()
+    # M = -A * np.expand_dims(r, 1) # M = -(r[:, None] * A)
+    # datagen_params = {'mode': 'Vano_4sp', 'dt_s': 0.25, 'N': 500, 'mu': mu, 'M': M, 'noise': 0.01, 'noise_T': 0.05, 'time_skip': 250, 'sp_list': sp_list}
+    # s0_list = [np.array([0.1, 0.1, 0.1, 0.1]),
+    #            np.array([0.9, 0.1, 0.1, 0.1]), 
+    #            np.array([0.1, 0.9, 0.1, 0.1]), 
+    #            np.array([0.1, 0.1, 0.9, 0.1]), 
+    #            np.array([0.1, 0.1, 0.1, 0.9]), 
+    #            np.array([0.7, 0.7, 0.1, 0.1]), 
+    #            np.array([0.7, 0.1, 0.7, 0.1]), 
+    #            np.array([0.7, 0.1, 0.1, 0.7]), 
+    #            np.array([0.1, 0.7, 0.7, 0.1]), 
+    #            np.array([0.1, 0.7, 0.1, 0.7]), 
+    #            np.array([0.1, 0.1, 0.7, 0.7]), 
+    #            np.array([0.5, 0.5, 0.5, 0.5]),
+    #            np.array([0.3, 0.6, 0.2, 0.4]), 
+    #            np.array([0.6, 0.3, 0.4, 0.2]), 
+    #            np.array([0.2, 0.4, 0.6, 0.3]), 
+    #            np.array([0.4, 0.2, 0.3, 0.6])]
     
-    sp_list = [24,39]
+    
     # Multispecies, multistability, no chaos with process noise
     ## one matrix, 20 random initial condition
+    sp_list = [24,39]
     from GenerateData import intrinsic_growth_vector_mu# , multistability_crit, im_symmetric_M, initial_conditions_s0
     noise = 0.001
     n_species = 50
     mu = intrinsic_growth_vector_mu(n_species)
-    M = np.load('multispecies_parameters/found_matrix.npy')
+    parameters_folder = 'multispecies_parameters' # in which, stores found_matrix.npy, initial_condition_{i}.npy
+    M = np.load(f'{parameters_folder}/found_matrix.npy')
     datagen_params = {'mode': "multispecies_M_found_GB",
                       'n_species': n_species,
                       'N': 500,
@@ -135,20 +193,29 @@ if __name__ == '__main__':
                       'M': M,
                       'time_skip': 250,
                       'sp_list': sp_list,
-                      "a_GB": 0.025}
+                      "a_GB": 0.025} # Species abundance below 0.05 (in code) then growth = 1 + a_GB
     
+    # If I want to continue a broken run, the temp.file for such run is resume_file
+    # Check the params carefully before continuing the run. the params are not saved in temp.file
     resume_file = sys.argv[1] if len(sys.argv) > 1 else None
     
     reps = 1000
     start = time.time()
-    for i in ['A', 'B']: # run 20 random s0
+    foldername = 'multispecies'
+    s0_list = ['A', 'B'] # Also involve in naming so be careful.
+    #########################NO CHANGE AFTERWARDS #############################
+    for i in s0_list: 
+        # Check if run is generated
         filename = '_'.join([datagen_params['mode'], f"s0_{i}", 'noise', str(datagen_params['noise'])])
-        if os.path.isfile(f"Simulated_data/multispecies/data_{filename}_{reps}.pkl"):
+        if os.path.isfile(f"Simulated_data/{foldername}/data_{filename}_{reps}.pkl"):
             continue
         log.info(f'Saving at {filename}')
         trial_start_time = time.time()
-        datagen_params['s0'] = np.load(file=f'multispecies_parameters/initial_condition_{i}.npy')
+        
+        # Update s0 in datagen_params
+        datagen_params['s0'] = np.load(file=f'{parameters_folder}/initial_condition_{i}.npy')
 
+        # Prep for iter_generatelv
         ARGS_ = (datagen_params['dt_s'], 
                  datagen_params['N'], 
                  datagen_params['s0'], 
@@ -158,11 +225,11 @@ if __name__ == '__main__':
                  datagen_params['noise_T'], 
                  datagen_params['time_skip'])
         
+        # Continue from previous temp.file (set number of finished run count) or create new run, new temp.file
         if resume_file is not None and f"s0_{i}" in resume_file:
             tmp_file2 = resume_file
             data_ = load_streamed_data(tmp_file2) 
             count = len(data_)
-            rep = count
             log.info(f"Continue run from {tmp_file2} at count {count}")
         
         else:
@@ -187,14 +254,14 @@ if __name__ == '__main__':
         
         while count < reps:
             data_ = iter_generatelv(dt_s=datagen_params['dt_s'], 
-                                       N=datagen_params['N'], 
-                                       s0=datagen_params['s0'], 
-                                       mu=datagen_params['mu'], 
-                                       M=datagen_params['M'], 
-                                       noise=datagen_params['noise'], 
-                                       noise_T=datagen_params['noise_T'], 
-                                       time_skip=datagen_params['time_skip'],
-                                       sp_list = datagen_params['sp_list'])
+                                    N=datagen_params['N'], 
+                                    s0=datagen_params['s0'],
+                                    mu=datagen_params['mu'], 
+                                    M=datagen_params['M'], 
+                                    noise=datagen_params['noise'], 
+                                    noise_T=datagen_params['noise_T'], 
+                                    time_skip=datagen_params['time_skip'],
+                                    sp_list = datagen_params['sp_list'])
             if data_ is not None:
                 append_to_file(tmp_file2, data_)
                 count +=1
@@ -219,8 +286,7 @@ if __name__ == '__main__':
                     'data': data, 
                     'datagen_params': params_to_save, 
                     'runtime': runtime}
-        
-        save_data(filename, savethis, tag=str(reps), foldername = 'multispecies')
+        save_data(filename, savethis, tag=str(reps), foldername = foldername)
         os.remove(tmp_file2)
         del ARGS_, data, no_noise, savethis
 
