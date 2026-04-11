@@ -205,7 +205,8 @@ if __name__=="__main__":
     
     data, datagen_params = load_data(folder_name, file_name)
     data = data[N0 : N0 + batch_N]
-    out_name = name_output(choose_name=datagen_params['mode'], cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"{s0}_{N0}_FALSEPOS")
+    mode = datagen_params.get('mode') or folder_name
+    out_name = name_output(choose_name=mode, cor_stat_arg=sys.argv[1], test_list_arg=sys.argv[2], maxlag=maxlag, note=f"{s0}_{N0}_FALSEPOS")
     
     # Pair-selection / stationarity settings (single source of truth)
     data = pair_selection(data=data, pair=pair, N0=N0)
